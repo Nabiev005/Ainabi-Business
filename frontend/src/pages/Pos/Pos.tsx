@@ -15,12 +15,40 @@ import * as saleService from "../../services/sale.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatMoney } from "../../utils/format";
 import { buildPaymentQrText, generateQrDataUrl } from "../../utils/qr";
+import { attributeChips } from "../../utils/attributes";
 import type { Category, Customer, PaymentMethod, Product } from "../../types";
 import "./Pos.css";
 
 interface CartLine {
   product: Product;
   quantity: number;
+  /** IMEI / serial per unit — only used when product.requiresSerial. */
+  serials: string[];
+}
+
+/** One input per unit sold. Enter jumps to the next box, so a handheld
+ * scanner (which "types" the code and presses Enter) can fill them in a row. */
+function SerialInputs({ line, onChange }: { line: CartLine; onChange: (index: number, value: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="pos-serials">
+      {Array.from({ length: line.quantity }, (_, index) => (
+        <input
+          key={index}
+          className={`input pos-serial-input ${line.serials[index]?.trim() ? "" : "is-empty"}`}
+          data-serial={`${line.product.id}-${index}`}
+          placeholder={t("pos.cart.serialPlaceholder", { n: index + 1 })}
+          value={line.serials[index] ?? ""}
+          onChange={(e) => onChange(index, e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            document.querySelector<HTMLInputElement>(`[data-serial="${line.product.id}-${index + 1}"]`)?.focus();
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 const PAYMENT_ICONS: Record<PaymentMethod, typeof Banknote> = {
@@ -144,6 +172,7 @@ export default function Pos() {
   const [customerId, setCustomerId] = useState("");
   const [completing, setCompleting] = useState(false);
   const [bumpedId, setBumpedId] = useState<string | null>(null);
+  const productFields = session?.business.productFields;
 
   const loadProducts = useCallback(() => {
     productService
@@ -172,7 +201,7 @@ export default function Pos() {
         }
         return prev.map((line) => (line.product.id === product.id ? { ...line, quantity: line.quantity + 1 } : line));
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity: 1, serials: [] }];
     });
     // Quick visual confirmation that the tap registered — the cart line pops once.
     setBumpedId(product.id);
@@ -192,6 +221,17 @@ export default function Pos() {
           return { ...line, quantity: next };
         })
         .filter((line) => line.quantity > 0),
+    );
+  }
+
+  function setLineSerial(productId: string, index: number, value: string) {
+    setCart((prev) =>
+      prev.map((line) => {
+        if (line.product.id !== productId) return line;
+        const serials = [...line.serials];
+        serials[index] = value;
+        return { ...line, serials };
+      }),
     );
   }
 
@@ -224,10 +264,31 @@ export default function Pos() {
       showToast({ variant: "error", title: t("pos.summary.selectCustomerTitle"), message: t("pos.summary.selectCustomerMessage") });
       return;
     }
+    const seen = new Set<string>();
+    for (const line of cart) {
+      if (!line.product.requiresSerial) continue;
+      const serials = line.serials.slice(0, line.quantity).map((s) => s.trim());
+      if (serials.length < line.quantity || serials.some((s) => !s)) {
+        showToast({ variant: "error", title: t("pos.serialMissingTitle"), message: t("pos.serialMissingMessage", { name: line.product.name }) });
+        return;
+      }
+      for (const serial of serials) {
+        const key = serial.toUpperCase();
+        if (seen.has(key)) {
+          showToast({ variant: "error", title: t("pos.serialMissingTitle"), message: t("pos.serialDuplicate", { serial }) });
+          return;
+        }
+        seen.add(key);
+      }
+    }
     setCompleting(true);
     try {
       await saleService.createSale({
-        items: cart.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+        items: cart.map((line) => ({
+          productId: line.product.id,
+          quantity: line.quantity,
+          ...(line.product.requiresSerial ? { serialNumbers: line.serials.slice(0, line.quantity).map((s) => s.trim()) } : {}),
+        })),
         discount,
         paymentMethod,
         customerId: paymentMethod === "DEBT" ? customerId : undefined,
@@ -284,6 +345,9 @@ export default function Pos() {
                 <div className="pos-product-thumb">{p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : <Package size={22} />}</div>
                 {p.categoryName && <span className="pos-product-category">{p.categoryName}</span>}
                 <span className="pos-product-name">{p.name}</span>
+                {attributeChips(p, productFields).length > 0 && (
+                  <span className="pos-product-attrs">{attributeChips(p, productFields).slice(0, 3).join(" · ")}</span>
+                )}
                 <span className="pos-product-price">{formatMoney(p.salePrice)}</span>
                 <span className="pos-product-stock">{p.quantity > 0 ? `${p.quantity} ${t("pos.left")}` : t("pos.out")}</span>
               </button>
@@ -310,33 +374,41 @@ export default function Pos() {
             <EmptyState icon={<ShoppingCart size={22} />} title={t("pos.cart.empty")} subtitle={t("pos.cart.emptySubtitle")} />
           ) : (
             cart.map((line) => (
-              <div className="pos-cart-item" key={line.product.id}>
-                <div className="pos-cart-item-info">
-                  <div className="pos-cart-item-name">{line.product.name}</div>
-                  <div className="pos-cart-item-price">
-                    {line.quantity} × {formatMoney(line.product.salePrice)}
+              <div className="pos-cart-line" key={line.product.id}>
+                <div className="pos-cart-item">
+                  <div className="pos-cart-item-info">
+                    <div className="pos-cart-item-name">{line.product.name}</div>
+                    <div className="pos-cart-item-price">
+                      {line.quantity} × {formatMoney(line.product.salePrice)}
+                    </div>
                   </div>
-                </div>
-                <div className="pos-qty-control">
-                  <button onClick={() => changeQuantity(line.product.id, -1)} aria-label={t("pos.cart.decrease")}>
-                    <Minus size={13} />
+                  <div className="pos-qty-control">
+                    <button onClick={() => changeQuantity(line.product.id, -1)} aria-label={t("pos.cart.decrease")}>
+                      <Minus size={13} />
+                    </button>
+                    <CartQtyInput
+                      quantity={line.quantity}
+                      max={line.product.quantity}
+                      onCommit={(qty) => setLineQuantity(line.product.id, qty)}
+                      onExceedsStock={(maxQty) =>
+                        showToast({ variant: "error", title: t("pos.insufficientStockTitle"), message: t("pos.insufficientStockRemaining", { qty: maxQty }) })
+                      }
+                    />
+                    <button onClick={() => changeQuantity(line.product.id, 1)} aria-label={t("pos.cart.increase")}>
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                  <span className="pos-cart-item-total mono-num">{formatMoney(line.product.salePrice * line.quantity)}</span>
+                  <button className="btn btn-ghost btn-icon btn-sm" onClick={() => removeLine(line.product.id)} aria-label={t("pos.cart.removeAria")}>
+                    <Trash2 size={15} color="var(--color-danger-text)" />
                   </button>
-                  <CartQtyInput
-                    quantity={line.quantity}
-                    max={line.product.quantity}
-                    onCommit={(qty) => setLineQuantity(line.product.id, qty)}
-                    onExceedsStock={(maxQty) =>
-                      showToast({ variant: "error", title: t("pos.insufficientStockTitle"), message: t("pos.insufficientStockRemaining", { qty: maxQty }) })
-                    }
-                  />
-                  <button onClick={() => changeQuantity(line.product.id, 1)} aria-label={t("pos.cart.increase")}>
-                    <Plus size={13} />
-                  </button>
                 </div>
-                <span className="pos-cart-item-total mono-num">{formatMoney(line.product.salePrice * line.quantity)}</span>
-                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => removeLine(line.product.id)} aria-label={t("pos.cart.removeAria")}>
-                  <Trash2 size={15} color="var(--color-danger-text)" />
-                </button>
+                {line.product.requiresSerial && (
+                  <SerialInputs line={line} onChange={(index, value) => setLineSerial(line.product.id, index, value)} />
+                )}
+                {line.product.warrantyMonths ? (
+                  <div className="pos-cart-warranty">{t("pos.cart.warranty", { months: line.product.warrantyMonths })}</div>
+                ) : null}
               </div>
             ))
           )}

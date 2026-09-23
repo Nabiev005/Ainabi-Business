@@ -5,7 +5,8 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Image as ImageIcon, Link2, Loader2, Trash2, Upload } from "lucide-react";
 import { Drawer } from "../../components/ui/Drawer";
-import type { Category, Product, ProductUnit } from "../../types";
+import type { AttributeValue, Category, Product, ProductFieldDef, ProductUnit } from "../../types";
+import { useAuth } from "../../hooks/useAuth";
 import { formatMoney } from "../../utils/format";
 import { generateBarcodeFromSku } from "../../utils/barcode";
 import { resizeImageToDataUrl } from "../../utils/image";
@@ -37,6 +38,57 @@ export interface ProductFormValues {
   unit: ProductUnit;
   imageUrl?: string;
   description?: string;
+  attributes?: Record<string, AttributeValue | null>;
+  requiresSerial?: boolean;
+  warrantyMonths?: number | null;
+}
+
+/** Form inputs hand back strings — turn them into the typed values the
+ * API expects (numbers for number fields, null for anything left blank). */
+function normalizeAttributes(fields: ProductFieldDef[], raw: Record<string, unknown> | undefined) {
+  const result: Record<string, AttributeValue | null> = {};
+  for (const field of fields) {
+    const value = raw?.[field.key];
+    if (field.type === "boolean") {
+      result[field.key] = value === true;
+    } else if (value === undefined || value === null || String(value).trim() === "") {
+      result[field.key] = null;
+    } else {
+      result[field.key] = field.type === "number" ? Number(value) : String(value).trim();
+    }
+  }
+  return result;
+}
+
+function AttributeInput({ field, register }: { field: ProductFieldDef; register: ReturnType<typeof useForm<ProductFormValues>>["register"] }) {
+  const { t } = useTranslation();
+  const name = `attributes.${field.key}` as const;
+  switch (field.type) {
+    case "select":
+      return (
+        <select className="select" {...register(name)}>
+          <option value="">{t("products.drawer.attributeSelect")}</option>
+          {(field.options ?? []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    case "boolean":
+      return (
+        <label className="product-attr-check">
+          <input type="checkbox" {...register(name)} />
+          {t("common.yes")}
+        </label>
+      );
+    case "number":
+      return <input type="number" step="any" className="input" {...register(name)} />;
+    case "date":
+      return <input type="date" className="input" {...register(name)} />;
+    default:
+      return <input className="input" {...register(name)} />;
+  }
 }
 
 export function ProductDrawer({ open, onClose, onSubmit, categories, product, submitting }: ProductDrawerProps) {
@@ -45,6 +97,10 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [imageProcessing, setImageProcessing] = useState(false);
+  const { session } = useAuth();
+  const productFields = useMemo(() => session?.business.productFields ?? [], [session?.business.productFields]);
+  const trackSerials = !!session?.business.trackSerials;
+  const trackWarranty = !!session?.business.trackWarranty;
 
   const schema = useMemo(
     () =>
@@ -60,8 +116,23 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
         unit: z.enum(["PIECE", "KG", "GRAM", "LITER", "METER", "PACK", "BOX"]),
         imageUrl: z.string().optional(),
         description: z.string().optional(),
+        attributes: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+        requiresSerial: z.boolean().optional(),
+        warrantyMonths: z.preprocess(
+          (v) => (v === "" || v === undefined || v === null || Number.isNaN(v) ? null : Number(v)),
+          z.number().int().min(0).max(240).nullable(),
+        ),
+      })
+      .superRefine((values, ctx) => {
+        for (const field of productFields) {
+          if (!field.required || field.type === "boolean") continue;
+          const value = values.attributes?.[field.key];
+          if (value === undefined || value === null || String(value).trim() === "") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["attributes", field.key], message: t("products.drawer.attributeRequired") });
+          }
+        }
       }),
-    [t],
+    [t, productFields],
   );
 
   const UNIT_OPTIONS: { value: ProductUnit; label: string }[] = [
@@ -112,11 +183,26 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
               unit: product.unit,
               imageUrl: product.imageUrl ?? undefined,
               description: product.description ?? undefined,
+              // Everything but checkboxes goes through text inputs.
+              attributes: Object.fromEntries(
+                Object.entries(product.attributes ?? {}).map(([k, v]) => [k, typeof v === "boolean" ? v : String(v)]),
+              ),
+              requiresSerial: product.requiresSerial,
+              warrantyMonths: product.warrantyMonths,
             }
-          : { unit: "PIECE", quantity: 0, minQuantity: 0 },
+          : { unit: "PIECE", quantity: 0, minQuantity: 0, attributes: {}, requiresSerial: trackSerials, warrantyMonths: null },
       );
     }
-  }, [open, product, reset]);
+  }, [open, product, reset, trackSerials]);
+
+  const submit = handleSubmit((values) =>
+    onSubmit({
+      ...values,
+      attributes: normalizeAttributes(productFields, values.attributes),
+      requiresSerial: trackSerials ? !!values.requiresSerial : false,
+      warrantyMonths: trackWarranty ? (values.warrantyMonths ?? null) : null,
+    }),
+  );
 
   const [purchasePrice, salePrice, skuValue, barcodeValue, imageUrlValue] = watch(["purchasePrice", "salePrice", "sku", "barcode", "imageUrl"]);
 
@@ -165,13 +251,13 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
           <button className="btn btn-secondary" onClick={onClose} disabled={submitting}>
             {t("common.cancel")}
           </button>
-          <button className="btn btn-primary" onClick={handleSubmit(onSubmit)} disabled={submitting}>
+          <button className="btn btn-primary" onClick={submit} disabled={submitting}>
             {submitting ? t("common.saving") : product ? t("common.save") : t("products.drawer.submitAdd")}
           </button>
         </>
       }
     >
-      <form className="stack gap-4" onSubmit={handleSubmit(onSubmit)}>
+      <form className="stack gap-4" onSubmit={submit}>
         <div className="field">
           <label className="field-label">{t("products.drawer.name")}</label>
           <input className={`input ${errors.name ? "has-error" : ""}`} placeholder={t("products.drawer.namePlaceholder")} {...register("name")} />
@@ -252,6 +338,45 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
             <input type="number" step="0.01" className="input" {...register("minQuantity")} />
           </div>
         </div>
+
+        {productFields.length > 0 && (
+          <div className="product-attr-section">
+            <div className="product-attr-title">{t("products.drawer.attributesTitle")}</div>
+            <div className="form-grid">
+              {productFields.map((field) => (
+                <div className="field" key={field.key}>
+                  <label className="field-label">
+                    {field.label}
+                    {field.required && field.type !== "boolean" && <span style={{ color: "var(--color-danger-text)" }}> *</span>}
+                  </label>
+                  <AttributeInput field={field} register={register} />
+                  {errors.attributes?.[field.key] && <span className="field-error">{t("products.drawer.attributeRequired")}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(trackSerials || trackWarranty) && (
+          <div className="form-grid">
+            {trackSerials && (
+              <div className="field">
+                <label className="product-attr-check" style={{ marginTop: 22 }}>
+                  <input type="checkbox" {...register("requiresSerial")} />
+                  {t("products.drawer.requiresSerial")}
+                </label>
+                <span className="field-hint">{t("products.drawer.requiresSerialHint")}</span>
+              </div>
+            )}
+            {trackWarranty && (
+              <div className="field">
+                <label className="field-label">{t("products.drawer.warrantyMonths")}</label>
+                <input type="number" min={0} max={240} step={1} className="input" placeholder="12" {...register("warrantyMonths")} />
+                {errors.warrantyMonths && <span className="field-error">{t("products.drawer.warrantyInvalid")}</span>}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="field">
           <label className="field-label">{t("products.drawer.image")}</label>

@@ -8,7 +8,7 @@ import * as authService from "../services/auth.service";
 
 export const registerHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = registerSchema.parse(req.body);
-  const { accessToken, refreshToken, session } = await authService.register(input);
+  const { accessToken, refreshToken, session } = await authService.register(input, req.lang);
   setRefreshCookie(res, refreshToken);
   res.status(201).json({ accessToken, session });
 });
@@ -22,7 +22,7 @@ export const loginHandler = asyncHandler(async (req: Request, res: Response) => 
 
 export const googleHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = googleAuthSchema.parse(req.body);
-  const { accessToken, refreshToken, session } = await authService.loginWithGoogle(input);
+  const { accessToken, refreshToken, session } = await authService.loginWithGoogle(input, req.lang);
   setRefreshCookie(res, refreshToken);
   res.status(200).json({ accessToken, session });
 });

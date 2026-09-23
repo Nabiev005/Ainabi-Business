@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Package, Search, User, X } from "lucide-react";
+import { Package, Search, ShieldCheck, User, X } from "lucide-react";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import * as productService from "../services/product.service";
 import * as customerService from "../services/customer.service";
-import { formatMoney } from "../utils/format";
-import type { Customer, Product } from "../types";
+import * as saleService from "../services/sale.service";
+import { useAuth } from "../hooks/useAuth";
+import { formatDate, formatMoney } from "../utils/format";
+import type { Customer, Product, SerialLookupResult } from "../types";
 
 export function GlobalSearch() {
   const { t } = useTranslation();
@@ -15,6 +17,9 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [serialHits, setSerialHits] = useState<SerialLookupResult[]>([]);
+  const { session } = useAuth();
+  const trackSerials = !!session?.business.trackSerials;
   const [loading, setLoading] = useState(false);
   const debouncedQuery = useDebouncedValue(query, 300);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -38,21 +43,33 @@ export function GlobalSearch() {
     if (!debouncedQuery.trim()) {
       setProducts([]);
       setCustomers([]);
+      setSerialHits([]);
       return;
     }
     setLoading(true);
+    // IMEI/serial lookup only for shops that track them, and only once the
+    // query is long enough to plausibly be a serial number.
+    const lookupSerial = trackSerials && debouncedQuery.trim().length >= 4;
     Promise.all([
       productService.listProducts({ search: debouncedQuery, pageSize: 5 }).then((r) => r.items),
       customerService.listCustomers(debouncedQuery).then((r) => r.slice(0, 5)),
+      lookupSerial ? saleService.findBySerial(debouncedQuery.trim()).catch(() => []) : Promise.resolve([]),
     ])
-      .then(([p, c]) => {
+      .then(([p, c, s]) => {
         setProducts(p);
         setCustomers(c);
+        setSerialHits(s);
       })
       .finally(() => setLoading(false));
-  }, [debouncedQuery]);
+  }, [debouncedQuery, trackSerials]);
 
-  const hasResults = products.length > 0 || customers.length > 0;
+  const hasResults = products.length > 0 || customers.length > 0 || serialHits.length > 0;
+
+  function goToSerialHit(hit: SerialLookupResult) {
+    setOpen(false);
+    setQuery("");
+    navigate(hit.customer ? `/customers/${hit.customer.id}` : `/products?q=${encodeURIComponent(hit.productName)}`);
+  }
 
   function goToProduct(p: Product) {
     setOpen(false);
@@ -86,6 +103,7 @@ export function GlobalSearch() {
             setQuery("");
             setProducts([]);
             setCustomers([]);
+            setSerialHits([]);
           }}
         >
           <X size={14} />
@@ -100,6 +118,33 @@ export function GlobalSearch() {
             <div className="header-search-empty">{t("header.noResults")}</div>
           ) : (
             <>
+              {serialHits.length > 0 && (
+                <div className="header-search-group">
+                  <span className="header-search-group-label">{t("header.serialSales")}</span>
+                  {serialHits.map((hit) => {
+                    const warrantyActive = !!hit.warrantyUntil && new Date(hit.warrantyUntil) >= new Date();
+                    return (
+                      <button key={`${hit.saleId}-${hit.serial}`} className="header-search-item" onClick={() => goToSerialHit(hit)}>
+                        <ShieldCheck size={15} />
+                        <span className="header-search-item-name">
+                          {hit.productName}
+                          <span className="text-muted" style={{ display: "block", fontSize: "var(--font-size-xs)" }}>
+                            {t("header.serialSoldOn", { date: formatDate(hit.soldAt) })}
+                            {hit.customer ? ` · ${hit.customer.name}` : ""}
+                          </span>
+                        </span>
+                        {hit.warrantyUntil && (
+                          <span className={`badge ${warrantyActive ? "badge-success" : "badge-neutral"}`}>
+                            {warrantyActive
+                              ? t("header.warrantyUntil", { date: formatDate(hit.warrantyUntil) })
+                              : t("header.warrantyExpired")}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {products.length > 0 && (
                 <div className="header-search-group">
                   <span className="header-search-group-label">{t("header.products")}</span>

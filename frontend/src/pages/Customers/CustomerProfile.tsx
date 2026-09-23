@@ -9,7 +9,7 @@ import { useToast } from "../../hooks/useToast";
 import { useLabels } from "../../hooks/useLabels";
 import * as customerService from "../../services/customer.service";
 import { extractErrorMessage } from "../../services/api";
-import { formatDateTime, formatMoney } from "../../utils/format";
+import { formatDate, formatDateTime, formatMoney } from "../../utils/format";
 import type { CustomerDetail } from "../../types";
 
 export default function CustomerProfile() {
@@ -111,7 +111,23 @@ export default function CustomerProfile() {
                 {customer.sales.map((s) => (
                   <tr key={s.id}>
                     <td className="text-muted">{formatDateTime(s.createdAt)}</td>
-                    <td>{s.items.map((i) => `${i.productName} ×${i.quantity}`).join(", ")}</td>
+                    <td>
+                      {s.items.map((i, idx) => (
+                        <div key={idx}>
+                          {i.productName} ×{i.quantity}
+                          {i.serialNumbers?.length > 0 && (
+                            <span className="text-muted mono-num" style={{ display: "block", fontSize: "var(--font-size-xs)" }}>
+                              IMEI/S/N: {i.serialNumbers.join(", ")}
+                            </span>
+                          )}
+                          {i.warrantyUntil && (
+                            <span className="text-muted" style={{ display: "block", fontSize: "var(--font-size-xs)" }}>
+                              {t("customers.profile.warrantyUntil", { date: formatDate(i.warrantyUntil) })}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </td>
                     <td>
                       <Badge variant="neutral">{labels.paymentMethod[s.paymentMethod]}</Badge>
                     </td>

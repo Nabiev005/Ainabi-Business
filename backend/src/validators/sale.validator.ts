@@ -3,6 +3,8 @@ import { z } from "zod";
 export const saleItemSchema = z.object({
   productId: z.string().min(1),
   quantity: z.coerce.number().positive("Саны 0дон чоң болушу керек"),
+  // One IMEI / serial number per unit, for products with requiresSerial.
+  serialNumbers: z.array(z.string().trim().min(1).max(64)).max(500).optional(),
 });
 
 export const createSaleSchema = z

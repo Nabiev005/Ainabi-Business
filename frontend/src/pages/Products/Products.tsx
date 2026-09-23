@@ -15,11 +15,15 @@ import * as categoryService from "../../services/category.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatMoney, formatNumber, unitLabel } from "../../utils/format";
 import type { Category, Product } from "../../types";
+import { useAuth } from "../../hooks/useAuth";
+import { attributeChips } from "../../utils/attributes";
 import "./Products.css";
 
 export default function Products() {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const { session } = useAuth();
+  const productFields = session?.business.productFields;
   const [products, setProducts] = useState<Product[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [total, setTotal] = useState(0);
@@ -212,6 +216,15 @@ export default function Products() {
                           <div className="product-name-cell">
                             <div className="product-name">{p.name}</div>
                             {p.sku && <div className="product-sku">{p.sku}</div>}
+                            {attributeChips(p, productFields).length > 0 && (
+                              <div className="product-attr-chips">
+                                {attributeChips(p, productFields).map((chip) => (
+                                  <span key={chip} className="product-attr-chip">
+                                    {chip}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>

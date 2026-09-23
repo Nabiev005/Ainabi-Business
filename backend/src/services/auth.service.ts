@@ -5,6 +5,8 @@ import { ApiError } from "../utils/ApiError";
 import { comparePassword, hashPassword, hashToken } from "../utils/password";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import { GoogleAuthInput, LoginInput, RegisterInput } from "../validators/auth.validator";
+import { applyTemplate } from "./settings.service";
+import type { Lang } from "../i18n/messages";
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
 const googleClient = new OAuth2Client(env.google.clientId);
@@ -49,7 +51,7 @@ function toSessionUser(user: { id: string; name: string; email: string; phone: s
   return { id: user.id, name: user.name, email: user.email, phone: user.phone, avatarUrl: user.avatarUrl, provider: user.provider };
 }
 
-export async function register(input: RegisterInput) {
+export async function register(input: RegisterInput, lang: Lang = "ky") {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw ApiError.conflict("Бул email менен аккаунт мурунтан бар.");
@@ -68,15 +70,22 @@ export async function register(input: RegisterInput) {
       },
     });
 
-    const business = await tx.business.create({
+    const created = await tx.business.create({
       data: { name: input.businessName, ownerId: user.id, phone: input.phone },
     });
 
     const employee = await tx.employee.create({
-      data: { userId: user.id, businessId: business.id, role: "OWNER", status: "ACTIVE", lastLoginAt: new Date() },
+      data: { userId: user.id, businessId: created.id, role: "OWNER", status: "ACTIVE", lastLoginAt: new Date() },
     });
 
-    await tx.category.create({ data: { businessId: business.id, name: "Жалпы" } });
+    // Seeds the chosen preset's categories + product fields (GENERAL just
+    // adds the one default category the app always started with).
+    const business = await applyTemplate(
+      tx,
+      created.id,
+      { businessType: input.businessType, addCategories: true, addFields: true },
+      lang,
+    );
 
     return { user, employee, business };
   });
@@ -124,7 +133,7 @@ export async function login(input: LoginInput) {
  * Returning users are matched by googleId, falling back to a matching email
  * (an existing password account gets Google linked to it automatically).
  */
-export async function loginWithGoogle(input: GoogleAuthInput) {
+export async function loginWithGoogle(input: GoogleAuthInput, lang: Lang = "ky") {
   if (!env.google.clientId) {
     throw ApiError.badRequest("Google менен кирүү бул сервер үчүн азырынча конфигурацияланган эмес.");
   }
@@ -174,15 +183,22 @@ export async function loginWithGoogle(input: GoogleAuthInput) {
           },
         }));
 
-      const business = await tx.business.create({
+      const createdBusiness = await tx.business.create({
         data: { name: `${name} дүкөнү`, ownerId: newUser.id },
       });
 
       const newEmployee = await tx.employee.create({
-        data: { userId: newUser.id, businessId: business.id, role: "OWNER", status: "ACTIVE", lastLoginAt: new Date() },
+        data: { userId: newUser.id, businessId: createdBusiness.id, role: "OWNER", status: "ACTIVE", lastLoginAt: new Date() },
       });
 
-      await tx.category.create({ data: { businessId: business.id, name: "Жалпы" } });
+      // Google sign-up has no form to pick a type on — start GENERAL; the
+      // owner can switch in Settings.
+      const business = await applyTemplate(
+        tx,
+        createdBusiness.id,
+        { businessType: "GENERAL", addCategories: true, addFields: true },
+        lang,
+      );
 
       return { user: newUser, business, employee: newEmployee };
     });

@@ -20,6 +20,30 @@ export interface User {
   provider: AuthProvider;
 }
 
+export type ProductFieldType = "text" | "number" | "select" | "boolean" | "date";
+export type AttributeValue = string | number | boolean;
+
+/** One of the business's own product fields (brand, RAM, size...). */
+export interface ProductFieldDef {
+  key: string;
+  label: string;
+  type: ProductFieldType;
+  options?: string[];
+  required: boolean;
+  showInList: boolean;
+}
+
+export interface BusinessTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  trackSerials: boolean;
+  trackWarranty: boolean;
+  categories: string[];
+  fields: ProductFieldDef[];
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -27,6 +51,10 @@ export interface Business {
   phone?: string | null;
   address?: string | null;
   qrPaymentInfo?: string | null;
+  businessType?: string;
+  productFields?: ProductFieldDef[];
+  trackSerials?: boolean;
+  trackWarranty?: boolean;
 }
 
 export interface Session {
@@ -63,6 +91,9 @@ export interface Product {
   unit: ProductUnit;
   imageUrl: string | null;
   description: string | null;
+  attributes: Record<string, AttributeValue>;
+  requiresSerial: boolean;
+  warrantyMonths: number | null;
   status: ProductStatus;
   stockStatus: StockStatus;
   createdAt: string;
@@ -90,7 +121,13 @@ export interface Customer {
 }
 
 export interface CustomerDetail extends Pick<Customer, "id" | "name" | "phone" | "notes" | "createdAt"> {
-  sales: { id: string; total: number; paymentMethod: PaymentMethod; createdAt: string; items: { productName: string; quantity: number; price: number }[] }[];
+  sales: {
+    id: string;
+    total: number;
+    paymentMethod: PaymentMethod;
+    createdAt: string;
+    items: { productName: string; quantity: number; price: number; serialNumbers: string[]; warrantyUntil: string | null }[];
+  }[];
   debts: { id: string; totalAmount: number; paidAmount: number; remainingAmount: number; status: DebtStatus; comment: string | null; createdAt: string; payments: { id: string; amount: number; method: PaymentMethod; createdAt: string }[] }[];
 }
 
@@ -104,6 +141,19 @@ export interface SaleListItem {
   cashierName: string;
   itemCount: number;
   createdAt: string;
+}
+
+export interface SerialLookupResult {
+  serial: string;
+  saleId: string;
+  saleStatus: string;
+  productId: string;
+  productName: string;
+  price: number;
+  warrantyUntil: string | null;
+  customer: { id: string; name: string; phone: string | null } | null;
+  cashierName: string;
+  soldAt: string;
 }
 
 export interface Debt {

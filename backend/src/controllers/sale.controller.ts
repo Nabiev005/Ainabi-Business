@@ -9,6 +9,11 @@ export const listHandler = asyncHandler(async (req: Request, res: Response) => {
   res.json(result);
 });
 
+export const bySerialHandler = asyncHandler(async (req: Request, res: Response) => {
+  const result = await saleService.findBySerial(req.auth!.businessId, req.params.serial);
+  res.json(result);
+});
+
 export const getHandler = asyncHandler(async (req: Request, res: Response) => {
   const sale = await saleService.getSale(req.auth!.businessId, req.params.id);
   res.json(sale);

@@ -73,6 +73,17 @@ model Business {
   // there's no single scannable payment-QR standard across KG banks, so
   // this is shown to the cashier/customer as read text, not parsed.
   qrPaymentInfo String?
+  // Which preset the owner picked ("PHONES", "LAPTOPS", "CLOTHING", ...) —
+  // see src/config/businessTemplates.ts. Only a label; the actual behaviour
+  // lives in the fields/flags below, which the owner can edit freely.
+  businessType  String   @default("GENERAL")
+  // The business's own extra product fields (brand, RAM, size, expiry
+  // date...) as ProductFieldDef[] — shape validated by settings.validator.
+  productFields Json     @default("[]")
+  // Serial/IMEI numbers are captured per sold unit at the POS.
+  trackSerials  Boolean  @default(false)
+  // Products carry a warranty period; sale items get a warrantyUntil date.
+  trackWarranty Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -174,6 +185,14 @@ model Product {
   unit          ProductUnit   @default(PIECE)
   imageUrl      String?
   description   String?
+  // Values for the business's productFields, keyed by field key.
+  attributes     Json          @default("{}")
+  // Flattened attribute values, so the plain product search also matches
+  // "Samsung" / "256GB" / "XL" typed into a custom field.
+  attributesText String?
+  // Each sold unit needs its own serial/IMEI number at the POS.
+  requiresSerial Boolean       @default(false)
+  warrantyMonths Int?
   status        ProductStatus @default(ACTIVE)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -309,8 +328,12 @@ model SaleItem {
   price     Decimal @db.Decimal(12, 2)
   costPrice Decimal @db.Decimal(12, 2)
   total     Decimal @db.Decimal(12, 2)
+  // IMEI / serial numbers of the exact units sold (one per unit).
+  serialNumbers String[]  @default([])
+  warrantyUntil DateTime?
 
   @@index([saleId])
+  @@index([serialNumbers], type: Gin)
   @@map("sale_items")
 }
 

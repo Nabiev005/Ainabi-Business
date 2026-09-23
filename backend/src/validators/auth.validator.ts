@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { businessTypeSchema } from "./settings.validator";
 
 export const registerSchema = z.object({
   name: z.string().min(2, "Атыңызды толук жазыңыз"),
@@ -6,6 +7,7 @@ export const registerSchema = z.object({
   phone: z.string().min(6, "Телефон номерин туура жазыңыз"),
   email: z.string().email("Email туура эмес"),
   password: z.string().min(6, "Пароль эң аз дегенде 6 белгиден турушу керек"),
+  businessType: businessTypeSchema.default("GENERAL"),
 });
 
 export const loginSchema = z.object({

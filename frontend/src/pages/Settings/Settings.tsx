@@ -7,6 +7,7 @@ import { useToast } from "../../hooks/useToast";
 import * as settingsService from "../../services/settings.service";
 import { extractErrorMessage } from "../../services/api";
 import type { Business } from "../../types";
+import { ProductSetup } from "./ProductSetup";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -97,6 +98,16 @@ export default function Settings() {
           </div>
         </form>
       </div>
+
+      {session?.role !== "CASHIER" && (
+        <ProductSetup
+          business={business}
+          onBusinessChange={(updated) => {
+            setBusiness(updated);
+            updateSessionBusiness(updated);
+          }}
+        />
+      )}
 
       <div className="card">
         <div className="card-header">

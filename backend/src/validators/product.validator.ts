@@ -14,6 +14,11 @@ export const productSchema = z.object({
   unit: productUnitEnum.default("PIECE"),
   imageUrl: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
+  // Values for the business's own product fields — checked against
+  // Business.productFields in product.service (unknown keys are dropped).
+  attributes: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).default({}),
+  requiresSerial: z.boolean().default(false),
+  warrantyMonths: z.coerce.number().int().min(0).max(240).optional().nullable(),
 });
 
 export const productQuerySchema = z.object({

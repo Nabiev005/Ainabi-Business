@@ -57,7 +57,13 @@ export async function getCustomer(businessId: string, id: string) {
       total: toNumber(s.total),
       paymentMethod: s.paymentMethod,
       createdAt: s.createdAt,
-      items: s.items.map((i) => ({ productName: i.product.name, quantity: toNumber(i.quantity), price: toNumber(i.price) })),
+      items: s.items.map((i) => ({
+        productName: i.product.name,
+        quantity: toNumber(i.quantity),
+        price: toNumber(i.price),
+        serialNumbers: i.serialNumbers,
+        warrantyUntil: i.warrantyUntil,
+      })),
     })),
     debts: customer.debts.map((d) => ({
       id: d.id,

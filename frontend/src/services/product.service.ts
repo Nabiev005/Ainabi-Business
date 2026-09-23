@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { Paginated, Product, ProductUnit } from "../types";
+import type { AttributeValue, Paginated, Product, ProductUnit } from "../types";
 
 export interface ProductQuery {
   search?: string;
@@ -22,6 +22,9 @@ export interface ProductPayload {
   unit: ProductUnit;
   imageUrl?: string | null;
   description?: string | null;
+  attributes?: Record<string, AttributeValue | null>;
+  requiresSerial?: boolean;
+  warrantyMonths?: number | null;
 }
 
 export async function listProducts(query: ProductQuery): Promise<Paginated<Product>> {

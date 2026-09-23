@@ -6,6 +6,10 @@ import { CreateStockMovementInput, StockQuery } from "../validators/stock.valida
 export async function createMovement(businessId: string, employeeId: string, input: CreateStockMovementInput) {
   const product = await prisma.product.findFirst({ where: { id: input.productId, businessId } });
   if (!product) throw ApiError.notFound("Товар табылган жок.");
+  if (input.supplierId) {
+    const supplier = await prisma.supplier.findFirst({ where: { id: input.supplierId, businessId } });
+    if (!supplier) throw ApiError.notFound("Жеткирүүчү табылган жок.");
+  }
 
   const isOutgoing = input.type === "OUT" || input.type === "WRITE_OFF";
   if (isOutgoing && toNumber(product.quantity) < input.quantity) {

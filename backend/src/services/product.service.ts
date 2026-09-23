@@ -4,6 +4,81 @@ import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
 import { generateBarcodeFromSku } from "../utils/barcode";
 import { ProductInput, ProductQuery } from "../validators/product.validator";
+import { parseProductFields } from "../validators/settings.validator";
+
+type AttributeValue = string | number | boolean;
+
+/**
+ * Checks submitted attribute values against the business's field
+ * definitions: unknown keys are dropped, values are coerced to the field's
+ * type, select values must be one of the options, required fields must be
+ * filled. Also returns a flat text copy used by the product search.
+ */
+async function resolveAttributes(businessId: string, input: ProductInput) {
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { productFields: true, trackSerials: true, trackWarranty: true },
+  });
+  const fields = parseProductFields(business?.productFields);
+  const attributes: Record<string, AttributeValue> = {};
+
+  for (const field of fields) {
+    const raw = input.attributes[field.key];
+    const isEmpty = raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "");
+
+    if (isEmpty) {
+      if (field.required && field.type !== "boolean") {
+        throw ApiError.badRequest(`"${field.label}" талаасын толтуруңуз.`);
+      }
+      continue;
+    }
+
+    switch (field.type) {
+      case "number": {
+        const n = Number(raw);
+        if (!Number.isFinite(n)) throw ApiError.badRequest(`"${field.label}" талаасына сан жазыңыз.`);
+        attributes[field.key] = n;
+        break;
+      }
+      case "boolean":
+        attributes[field.key] = raw === true || raw === "true";
+        break;
+      case "date": {
+        const value = String(raw).trim();
+        if (!/^d{4}-d{2}-d{2}$/.test(value)) throw ApiError.badRequest(`"${field.label}" талаасындагы дата туура эмес.`);
+        attributes[field.key] = value;
+        break;
+      }
+      case "select": {
+        const value = String(raw).trim();
+        if (!field.options?.includes(value)) throw ApiError.badRequest(`"${field.label}" талаасынын мааниси тизмеде жок.`);
+        attributes[field.key] = value;
+        break;
+      }
+      default:
+        attributes[field.key] = String(raw).trim().slice(0, 200);
+    }
+  }
+
+  const attributesText =
+    Object.values(attributes)
+      .filter((v) => typeof v !== "boolean")
+      .join(" ") || null;
+
+  return {
+    attributes,
+    attributesText,
+    // Flags only mean something while the business tracks them.
+    requiresSerial: !!business?.trackSerials && input.requiresSerial,
+    warrantyMonths: business?.trackWarranty ? input.warrantyMonths || null : null,
+  };
+}
+
+async function assertCategory(businessId: string, categoryId: string | null | undefined) {
+  if (!categoryId) return;
+  const category = await prisma.category.findFirst({ where: { id: categoryId, businessId } });
+  if (!category) throw ApiError.badRequest("Категория табылган жок.");
+}
 
 /** Assigns the next "SKU-0007"-style number for a business when the owner
  * leaves the SKU field blank — counting includes archived products so a
@@ -47,6 +122,9 @@ function serializeProduct(product: Prisma.ProductGetPayload<{ include: { categor
     salePrice,
     profit: Math.round((salePrice - purchasePrice) * 100) / 100,
     marginPercent: purchasePrice > 0 ? Math.round(((salePrice - purchasePrice) / purchasePrice) * 1000) / 10 : 0,
+    attributes: (product.attributes ?? {}) as Record<string, AttributeValue>,
+    requiresSerial: product.requiresSerial,
+    warrantyMonths: product.warrantyMonths,
     quantity,
     minQuantity,
     unit: product.unit,
@@ -70,6 +148,7 @@ export async function listProducts(businessId: string, query: ProductQuery) {
             { name: { contains: query.search, mode: "insensitive" } },
             { sku: { contains: query.search, mode: "insensitive" } },
             { barcode: { contains: query.search, mode: "insensitive" } },
+            { attributesText: { contains: query.search, mode: "insensitive" } },
           ],
         }
       : {}),
@@ -122,6 +201,9 @@ export async function getProduct(businessId: string, id: string) {
 }
 
 export async function createProduct(businessId: string, input: ProductInput) {
+  await assertCategory(businessId, input.categoryId);
+  const extra = await resolveAttributes(businessId, input);
+
   if (input.barcode) {
     const exists = await prisma.product.findFirst({ where: { businessId, barcode: input.barcode } });
     if (exists) throw ApiError.conflict("Бул штрих-код менен товар мурунтан бар.");
@@ -144,6 +226,7 @@ export async function createProduct(businessId: string, input: ProductInput) {
       unit: input.unit,
       imageUrl: input.imageUrl || null,
       description: input.description || null,
+      ...extra,
     },
     include: { category: true },
   });
@@ -167,6 +250,13 @@ export async function createProduct(businessId: string, input: ProductInput) {
 export async function updateProduct(businessId: string, id: string, input: ProductInput) {
   const existing = await prisma.product.findFirst({ where: { id, businessId } });
   if (!existing) throw ApiError.notFound("Товар табылган жок.");
+  await assertCategory(businessId, input.categoryId);
+  const extra = await resolveAttributes(businessId, input);
+
+  if (input.barcode && input.barcode !== existing.barcode) {
+    const duplicate = await prisma.product.findFirst({ where: { businessId, barcode: input.barcode, id: { not: id } } });
+    if (duplicate) throw ApiError.conflict("Бул штрих-код менен товар мурунтан бар.");
+  }
 
   const product = await prisma.product.update({
     where: { id },
@@ -181,6 +271,7 @@ export async function updateProduct(businessId: string, id: string, input: Produ
       unit: input.unit,
       imageUrl: input.imageUrl || null,
       description: input.description || null,
+      ...extra,
     },
     include: { category: true },
   });
