@@ -109,7 +109,7 @@ export default function CustomerProfile() {
               </thead>
               <tbody>
                 {customer.sales.map((s) => (
-                  <tr key={s.id}>
+                  <tr key={s.id} className="table-row-clickable" onClick={() => navigate(`/sales?open=${s.id}`)}>
                     <td className="text-muted">{formatDateTime(s.createdAt)}</td>
                     <td>
                       {s.items.map((i, idx) => (

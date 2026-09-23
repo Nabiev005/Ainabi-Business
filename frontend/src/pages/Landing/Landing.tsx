@@ -1,20 +1,43 @@
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowLeftRight,
   ArrowRight,
   BarChart3,
+  CalendarClock,
+  Car,
   CheckCircle2,
+  ClipboardCheck,
+  Coins,
+  FileSpreadsheet,
+  Hammer,
   Instagram,
+  Laptop,
+  Layers,
   LayoutDashboard,
   MessageCircle,
   Package,
+  PackagePlus,
+  Pill,
+  Scale,
+  ShieldCheck,
+  Shirt,
+  ShoppingBasket,
   ShoppingCart,
+  Smartphone,
+  Sparkles,
+  Store,
+  Tag,
+  Tv,
+  Undo2,
   UserPlus,
   Users,
   Wallet,
   Warehouse,
+  Wrench,
   X,
   Zap,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { GuideAccordion } from "../../components/GuideAccordion";
@@ -30,6 +53,35 @@ interface DailyItem { title: string; text: string }
 const FEATURE_ICONS = [Package, ShoppingCart, Warehouse, Users, Wallet, BarChart3];
 const DAILY_ICONS = [LayoutDashboard, ShoppingCart, Warehouse, BarChart3];
 
+/** Shop types the app sets itself up for (see backend businessTemplates.ts). */
+const INDUSTRIES: { id: string; icon: LucideIcon }[] = [
+  { id: "PHONES", icon: Smartphone },
+  { id: "LAPTOPS", icon: Laptop },
+  { id: "APPLIANCES", icon: Tv },
+  { id: "CLOTHING", icon: Shirt },
+  { id: "GROCERY", icon: ShoppingBasket },
+  { id: "PHARMACY", icon: Pill },
+  { id: "COSMETICS", icon: Sparkles },
+  { id: "AUTO_PARTS", icon: Car },
+  { id: "BUILDING", icon: Hammer },
+  { id: "GENERAL", icon: Store },
+];
+
+const CAPABILITY_ICONS: LucideIcon[] = [
+  PackagePlus,
+  ClipboardCheck,
+  ArrowLeftRight,
+  Undo2,
+  Coins,
+  Wrench,
+  ShieldCheck,
+  CalendarClock,
+  Layers,
+  Tag,
+  FileSpreadsheet,
+  Scale,
+];
+
 export default function Landing() {
   const { t } = useTranslation();
   const { session, isLoading } = useAuth();
@@ -40,6 +92,8 @@ export default function Landing() {
   const features = t("landing.features.items", { returnObjects: true }) as Feature[];
   const steps = t("landing.steps.items", { returnObjects: true }) as Step[];
   const dailyUse = t("landing.daily.items", { returnObjects: true }) as DailyItem[];
+  const industryTexts = t("landing.industries.items", { returnObjects: true }) as Record<string, string>;
+  const capabilities = t("landing.capabilities.items", { returnObjects: true }) as Feature[];
 
   // Already signed in — no reason to see the marketing page every visit.
   if (!isLoading && session) {
@@ -133,6 +187,50 @@ export default function Landing() {
                 </div>
                 <h3>{f.title}</h3>
                 <p>{f.text}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="landing-section">
+        <div className="landing-section-header">
+          <h2 className="landing-section-title">{t("landing.industries.title")}</h2>
+          <p className="landing-section-subtitle">{t("landing.industries.subtitle")}</p>
+        </div>
+        <div className="landing-industries">
+          {INDUSTRIES.map(({ id, icon: Icon }) => (
+            <div className="landing-industry" key={id}>
+              <div className="landing-feature-icon">
+                <Icon size={20} />
+              </div>
+              <div>
+                <h3>{t(`businessTypes.${id}`)}</h3>
+                <p>{industryTexts[id]}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-section">
+        <div className="landing-section-header">
+          <span className="landing-eyebrow" style={{ margin: "0 auto var(--space-3)" }}>
+            <Zap size={13} /> {t("landing.capabilities.eyebrow")}
+          </span>
+          <h2 className="landing-section-title">{t("landing.capabilities.title")}</h2>
+          <p className="landing-section-subtitle">{t("landing.capabilities.subtitle")}</p>
+        </div>
+        <div className="landing-features landing-capabilities">
+          {capabilities.map((c, i) => {
+            const Icon = CAPABILITY_ICONS[i] ?? CheckCircle2;
+            return (
+              <div className="landing-feature-card" key={c.title}>
+                <div className="landing-feature-icon">
+                  <Icon size={22} />
+                </div>
+                <h3>{c.title}</h3>
+                <p>{c.text}</p>
               </div>
             );
           })}

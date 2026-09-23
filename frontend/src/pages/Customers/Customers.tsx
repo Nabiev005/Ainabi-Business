@@ -48,10 +48,10 @@ export default function Customers() {
     load();
   }, [load]);
 
-  async function handleSubmit(values: { name: string; phone: string; notes: string }) {
+  async function handleSubmit(values: { name: string; phone: string; notes: string; isWholesale: boolean }) {
     setSubmitting(true);
     try {
-      const payload = { name: values.name, phone: values.phone || null, notes: values.notes || null };
+      const payload = { name: values.name, phone: values.phone || null, notes: values.notes || null, isWholesale: values.isWholesale };
       if (editing) {
         await customerService.updateCustomer(editing.id, payload);
         showToast({ variant: "success", title: t("customers.saved") });
@@ -174,7 +174,14 @@ export default function Customers() {
               <tbody>
                 {visibleCustomers.map((c) => (
                   <tr key={c.id} className="table-row-clickable" onClick={() => navigate(`/customers/${c.id}`)}>
-                    <td style={{ fontWeight: 700 }}>{c.name}</td>
+                    <td style={{ fontWeight: 700 }}>
+                      {c.name}
+                      {c.isWholesale && (
+                        <span className="badge badge-info" style={{ marginLeft: 6 }}>
+                          {t("sales.wholesale")}
+                        </span>
+                      )}
+                    </td>
                     <td className="text-muted">
                       {c.phone ? (
                         <span className="row gap-1">

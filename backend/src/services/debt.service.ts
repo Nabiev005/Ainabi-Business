@@ -1,6 +1,7 @@
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { round2, toNumber } from "../utils/money";
+import { findOpenShift } from "../utils/stockLedger";
 import { CreateDebtInput, CreateDebtPaymentInput } from "../validators/debt.validator";
 
 export async function listDebts(businessId: string, status?: string) {
@@ -47,7 +48,7 @@ export async function createDebt(businessId: string, input: CreateDebtInput) {
   });
 }
 
-export async function addPayment(businessId: string, debtId: string, input: CreateDebtPaymentInput) {
+export async function addPayment(businessId: string, debtId: string, input: CreateDebtPaymentInput, employeeId?: string) {
   const debt = await prisma.debt.findFirst({ where: { id: debtId, businessId } });
   if (!debt) throw ApiError.notFound("Карыз табылган жок.");
 
@@ -56,22 +57,23 @@ export async function addPayment(businessId: string, debtId: string, input: Crea
     throw ApiError.badRequest(`Төлөм суммасы карыздан ашпашы керек (калган: ${remaining} сом).`);
   }
 
-  const newPaid = round2(toNumber(debt.paidAmount) + input.amount);
-  const newRemaining = round2(remaining - input.amount);
+  const shift = employeeId ? await findOpenShift(prisma, businessId, employeeId) : null;
 
-  const [payment] = await prisma.$transaction([
-    prisma.debtPayment.create({
-      data: { debtId, amount: input.amount, method: input.method, comment: input.comment || null },
-    }),
-    prisma.debt.update({
+  // Relative, conditional update: two payments arriving together can't both
+  // read the same "remaining" and overpay the debt.
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.debt.updateMany({
+      where: { id: debtId, remainingAmount: { gte: input.amount } },
+      data: { paidAmount: { increment: input.amount }, remainingAmount: { decrement: input.amount } },
+    });
+    if (count === 0) throw ApiError.badRequest(`Төлөм суммасы карыздан ашпашы керек (калган: ${remaining} сом).`);
+    const updated = await tx.debt.findUniqueOrThrow({ where: { id: debtId } });
+    await tx.debt.update({
       where: { id: debtId },
-      data: {
-        paidAmount: newPaid,
-        remainingAmount: newRemaining,
-        status: newRemaining <= 0 ? "PAID" : "PARTIAL",
-      },
-    }),
-  ]);
-
-  return payment;
+      data: { status: toNumber(updated.remainingAmount) <= 0 ? "PAID" : "PARTIAL" },
+    });
+    return tx.debtPayment.create({
+      data: { debtId, amount: input.amount, method: input.method, comment: input.comment || null, shiftId: shift?.id ?? null },
+    });
+  });
 }

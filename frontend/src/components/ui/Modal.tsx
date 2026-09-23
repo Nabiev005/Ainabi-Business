@@ -5,9 +5,11 @@ interface ModalProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  /** "wide" for forms with tables (returns, transfers, variant grids). */
+  size?: "default" | "wide";
 }
 
-export function Modal({ open, onClose, children }: ModalProps) {
+export function Modal({ open, onClose, children, size = "default" }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -21,7 +23,7 @@ export function Modal({ open, onClose, children }: ModalProps) {
 
   return createPortal(
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">{children}</div>
+      <div className={`modal ${size === "wide" ? "modal-wide" : ""}`}>{children}</div>
     </div>,
     document.body,
   );

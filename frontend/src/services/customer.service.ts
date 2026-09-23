@@ -5,6 +5,7 @@ export interface CustomerPayload {
   name: string;
   phone?: string | null;
   notes?: string | null;
+  isWholesale?: boolean;
 }
 
 export async function listCustomers(search?: string): Promise<Customer[]> {

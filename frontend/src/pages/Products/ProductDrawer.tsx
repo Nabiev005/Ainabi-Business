@@ -5,12 +5,13 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Image as ImageIcon, Link2, Loader2, Trash2, Upload } from "lucide-react";
 import { Drawer } from "../../components/ui/Drawer";
-import type { AttributeValue, Category, Product, ProductFieldDef, ProductUnit } from "../../types";
+import type { AttributeValue, Category, Product, ProductFieldDef, ProductPackage, ProductUnit } from "../../types";
 import { useAuth } from "../../hooks/useAuth";
 import { formatMoney } from "../../utils/format";
 import { generateBarcodeFromSku } from "../../utils/barcode";
 import { resizeImageToDataUrl } from "../../utils/image";
 import { useToast } from "../../hooks/useToast";
+import { AnalogsSection, BatchesSection, PackagesEditor, SerialsSection } from "./ProductExtras";
 import "./Products.css";
 
 // A generous cap on the *original* file — it gets resized/compressed well
@@ -24,6 +25,10 @@ interface ProductDrawerProps {
   categories: Category[];
   product?: Product | null;
   submitting: boolean;
+  /** Pre-fills the barcode (a code scanned at receiving that wasn't found). */
+  initialBarcode?: string;
+  /** Stock is added by the document that opened the drawer (receiving). */
+  hideInitialStock?: boolean;
 }
 
 export interface ProductFormValues {
@@ -33,6 +38,7 @@ export interface ProductFormValues {
   barcode?: string;
   purchasePrice: number;
   salePrice: number;
+  wholesalePrice?: number | null;
   quantity: number;
   minQuantity: number;
   unit: ProductUnit;
@@ -41,6 +47,11 @@ export interface ProductFormValues {
   attributes?: Record<string, AttributeValue | null>;
   requiresSerial?: boolean;
   warrantyMonths?: number | null;
+  prescriptionRequired?: boolean;
+  scaleCode?: string | null;
+  packages?: ProductPackage[];
+  initialExpiryDate?: string | null;
+  initialBatchNumber?: string | null;
 }
 
 /** Form inputs hand back strings — turn them into the typed values the
@@ -91,47 +102,57 @@ function AttributeInput({ field, register }: { field: ProductFieldDef; register:
   }
 }
 
-export function ProductDrawer({ open, onClose, onSubmit, categories, product, submitting }: ProductDrawerProps) {
+const emptyToNull = (v: unknown) => (v === "" || v === undefined || v === null || Number.isNaN(v) ? null : v);
+
+export function ProductDrawer({ open, onClose, onSubmit, categories, product, submitting, initialBarcode, hideInitialStock }: ProductDrawerProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [imageProcessing, setImageProcessing] = useState(false);
+  const [packages, setPackages] = useState<ProductPackage[]>([]);
   const { session } = useAuth();
-  const productFields = useMemo(() => session?.business.productFields ?? [], [session?.business.productFields]);
-  const trackSerials = !!session?.business.trackSerials;
-  const trackWarranty = !!session?.business.trackWarranty;
+  const business = session?.business;
+  const productFields = useMemo(() => business?.productFields ?? [], [business?.productFields]);
+  const trackSerials = !!business?.trackSerials;
+  const trackWarranty = !!business?.trackWarranty;
+  const trackExpiry = !!business?.trackExpiry;
+  const weightBarcodes = !!business?.weightBarcodes;
+  const checkPrescription = !!business?.checkPrescription;
 
   const schema = useMemo(
     () =>
-      z.object({
-        name: z.string().min(1, t("products.drawer.nameRequired")),
-        categoryId: z.string().optional(),
-        sku: z.string().optional(),
-        barcode: z.string().optional(),
-        purchasePrice: z.coerce.number().nonnegative(t("products.drawer.purchasePriceRequired")),
-        salePrice: z.coerce.number().nonnegative(t("products.drawer.salePriceRequired")),
-        quantity: z.coerce.number().nonnegative(),
-        minQuantity: z.coerce.number().nonnegative(),
-        unit: z.enum(["PIECE", "KG", "GRAM", "LITER", "METER", "PACK", "BOX"]),
-        imageUrl: z.string().optional(),
-        description: z.string().optional(),
-        attributes: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
-        requiresSerial: z.boolean().optional(),
-        warrantyMonths: z.preprocess(
-          (v) => (v === "" || v === undefined || v === null || Number.isNaN(v) ? null : Number(v)),
-          z.number().int().min(0).max(240).nullable(),
-        ),
-      })
-      .superRefine((values, ctx) => {
-        for (const field of productFields) {
-          if (!field.required || field.type === "boolean") continue;
-          const value = values.attributes?.[field.key];
-          if (value === undefined || value === null || String(value).trim() === "") {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["attributes", field.key], message: t("products.drawer.attributeRequired") });
+      z
+        .object({
+          name: z.string().min(1, t("products.drawer.nameRequired")),
+          categoryId: z.string().optional(),
+          sku: z.string().optional(),
+          barcode: z.string().optional(),
+          purchasePrice: z.coerce.number().nonnegative(t("products.drawer.purchasePriceRequired")),
+          salePrice: z.coerce.number().nonnegative(t("products.drawer.salePriceRequired")),
+          wholesalePrice: z.preprocess(emptyToNull, z.coerce.number().nonnegative().nullable()),
+          quantity: z.coerce.number().nonnegative(),
+          minQuantity: z.coerce.number().nonnegative(),
+          unit: z.enum(["PIECE", "KG", "GRAM", "LITER", "METER", "PACK", "BOX"]),
+          imageUrl: z.string().optional(),
+          description: z.string().optional(),
+          attributes: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+          requiresSerial: z.boolean().optional(),
+          warrantyMonths: z.preprocess(emptyToNull, z.coerce.number().int().min(0).max(240).nullable()),
+          prescriptionRequired: z.boolean().optional(),
+          scaleCode: z.preprocess(emptyToNull, z.string().regex(/^\d{5}$/, t("products.drawer.scaleCodeInvalid")).nullable()),
+          initialExpiryDate: z.string().optional().nullable(),
+          initialBatchNumber: z.string().optional().nullable(),
+        })
+        .superRefine((values, ctx) => {
+          for (const field of productFields) {
+            if (!field.required || field.type === "boolean") continue;
+            const value = values.attributes?.[field.key];
+            if (value === undefined || value === null || String(value).trim() === "") {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["attributes", field.key], message: t("products.drawer.attributeRequired") });
+            }
           }
-        }
-      }),
+        }),
     [t, productFields],
   );
 
@@ -169,6 +190,7 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
       // something a person would want to see/edit as text — only reveal the
       // manual-URL field by default when the existing value is a real link.
       setShowUrlInput(!!product?.imageUrl && !product.imageUrl.startsWith("data:"));
+      setPackages(product?.packages ?? []);
       reset(
         product
           ? {
@@ -178,6 +200,7 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
               barcode: product.barcode ?? undefined,
               purchasePrice: product.purchasePrice,
               salePrice: product.salePrice,
+              wholesalePrice: product.wholesalePrice,
               quantity: product.quantity,
               minQuantity: product.minQuantity,
               unit: product.unit,
@@ -189,22 +212,48 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
               ),
               requiresSerial: product.requiresSerial,
               warrantyMonths: product.warrantyMonths,
+              prescriptionRequired: product.prescriptionRequired,
+              scaleCode: product.scaleCode,
             }
-          : { unit: "PIECE", quantity: 0, minQuantity: 0, attributes: {}, requiresSerial: trackSerials, warrantyMonths: null },
+          : {
+              unit: "PIECE",
+              quantity: 0,
+              minQuantity: 0,
+              attributes: {},
+              requiresSerial: trackSerials,
+              warrantyMonths: null,
+              barcode: initialBarcode,
+              prescriptionRequired: false,
+            },
       );
     }
-  }, [open, product, reset, trackSerials]);
+  }, [open, product, reset, trackSerials, initialBarcode]);
 
-  const submit = handleSubmit((values) =>
-    onSubmit({
+  const submit = handleSubmit((values) => {
+    const cleanPackages = packages.filter((p) => p.name.trim() && p.factor > 0);
+    return onSubmit({
       ...values,
+      quantity: hideInitialStock ? 0 : values.quantity,
       attributes: normalizeAttributes(productFields, values.attributes),
       requiresSerial: trackSerials ? !!values.requiresSerial : false,
       warrantyMonths: trackWarranty ? (values.warrantyMonths ?? null) : null,
-    }),
-  );
+      prescriptionRequired: checkPrescription ? !!values.prescriptionRequired : false,
+      scaleCode: weightBarcodes ? values.scaleCode || null : null,
+      packages: cleanPackages.map((p) => ({ name: p.name.trim(), factor: p.factor, barcode: p.barcode || null, salePrice: p.salePrice ?? null })),
+      initialExpiryDate: !product && trackExpiry ? values.initialExpiryDate || null : null,
+      initialBatchNumber: !product && trackExpiry ? values.initialBatchNumber || null : null,
+    });
+  });
 
-  const [purchasePrice, salePrice, skuValue, barcodeValue, imageUrlValue] = watch(["purchasePrice", "salePrice", "sku", "barcode", "imageUrl"]);
+  const [purchasePrice, salePrice, skuValue, barcodeValue, imageUrlValue, unitValue, quantityValue] = watch([
+    "purchasePrice",
+    "salePrice",
+    "sku",
+    "barcode",
+    "imageUrl",
+    "unit",
+    "quantity",
+  ]);
 
   async function handleImageFile(file: File | undefined) {
     if (!file) return;
@@ -316,28 +365,49 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
           </div>
         </div>
 
-        <div className="margin-preview">
-          <div className="margin-preview-item">
-            <div className="margin-preview-value">{formatMoney(profit)}</div>
-            <div className="margin-preview-label">{t("products.drawer.profit")}</div>
+        <div className="form-grid">
+          <div className="field">
+            <label className="field-label">{t("products.drawer.wholesalePrice")}</label>
+            <input type="number" step="0.01" min={0} className="input" placeholder={t("products.drawer.optional")} {...register("wholesalePrice")} />
           </div>
-          <div className="margin-preview-item">
-            <div className="margin-preview-value">{margin}%</div>
-            <div className="margin-preview-label">{t("products.drawer.margin")}</div>
+          <div className="margin-preview" style={{ alignSelf: "end" }}>
+            <div className="margin-preview-item">
+              <div className="margin-preview-value">{formatMoney(profit)}</div>
+              <div className="margin-preview-label">{t("products.drawer.profit")}</div>
+            </div>
+            <div className="margin-preview-item">
+              <div className="margin-preview-value">{margin}%</div>
+              <div className="margin-preview-label">{t("products.drawer.margin")}</div>
+            </div>
           </div>
         </div>
 
         <div className="form-grid">
-          <div className="field">
-            <label className="field-label">{product ? t("products.drawer.currentStock") : t("products.drawer.initialStock")}</label>
-            <input type="number" step="0.01" className="input" disabled={!!product} {...register("quantity")} />
-            {product && <span className="field-hint">{t("products.drawer.stockHint")}</span>}
-          </div>
+          {!hideInitialStock && (
+            <div className="field">
+              <label className="field-label">{product ? t("products.drawer.currentStock") : t("products.drawer.initialStock")}</label>
+              <input type="number" step="0.01" className="input" disabled={!!product} {...register("quantity")} />
+              {product && <span className="field-hint">{t("products.drawer.stockHint")}</span>}
+            </div>
+          )}
           <div className="field">
             <label className="field-label">{t("products.drawer.minStock")}</label>
             <input type="number" step="0.01" className="input" {...register("minQuantity")} />
           </div>
         </div>
+
+        {!product && !hideInitialStock && trackExpiry && Number(quantityValue) > 0 && (
+          <div className="form-grid">
+            <div className="field">
+              <label className="field-label">{t("products.drawer.initialExpiry")}</label>
+              <input type="date" className="input" {...register("initialExpiryDate")} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t("products.drawer.initialBatch")}</label>
+              <input className="input" {...register("initialBatchNumber")} />
+            </div>
+          </div>
+        )}
 
         {productFields.length > 0 && (
           <div className="product-attr-section">
@@ -357,7 +427,7 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
           </div>
         )}
 
-        {(trackSerials || trackWarranty) && (
+        {(trackSerials || trackWarranty || checkPrescription || weightBarcodes) && (
           <div className="form-grid">
             {trackSerials && (
               <div className="field">
@@ -375,8 +445,34 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
                 {errors.warrantyMonths && <span className="field-error">{t("products.drawer.warrantyInvalid")}</span>}
               </div>
             )}
+            {checkPrescription && (
+              <div className="field">
+                <label className="product-attr-check" style={{ marginTop: 22 }}>
+                  <input type="checkbox" {...register("prescriptionRequired")} />
+                  {t("products.drawer.prescriptionRequired")}
+                </label>
+                <span className="field-hint">{t("products.drawer.prescriptionHint")}</span>
+              </div>
+            )}
+            {weightBarcodes && (
+              <div className="field">
+                <label className="field-label">{t("products.drawer.scaleCode")}</label>
+                <input className={`input ${errors.scaleCode ? "has-error" : ""}`} maxLength={5} placeholder="00123" {...register("scaleCode")} />
+                {errors.scaleCode ? (
+                  <span className="field-error">{errors.scaleCode.message}</span>
+                ) : (
+                  <span className="field-hint">{t("products.drawer.scaleCodeHint")}</span>
+                )}
+              </div>
+            )}
           </div>
         )}
+
+        <PackagesEditor packages={packages} onChange={setPackages} unit={unitValue ?? "PIECE"} salePrice={Number(salePrice) || 0} />
+
+        {product && <AnalogsSection product={product} />}
+        {product && trackExpiry && <BatchesSection productId={product.id} unit={product.unit} />}
+        {product && product.requiresSerial && <SerialsSection productId={product.id} />}
 
         <div className="field">
           <label className="field-label">{t("products.drawer.image")}</label>

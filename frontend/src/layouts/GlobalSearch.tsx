@@ -68,7 +68,7 @@ export function GlobalSearch() {
   function goToSerialHit(hit: SerialLookupResult) {
     setOpen(false);
     setQuery("");
-    navigate(hit.customer ? `/customers/${hit.customer.id}` : `/products?q=${encodeURIComponent(hit.productName)}`);
+    navigate(hit.saleId ? `/sales?open=${hit.saleId}` : `/products?q=${encodeURIComponent(hit.productName)}`);
   }
 
   function goToProduct(p: Product) {
@@ -124,16 +124,20 @@ export function GlobalSearch() {
                   {serialHits.map((hit) => {
                     const warrantyActive = !!hit.warrantyUntil && new Date(hit.warrantyUntil) >= new Date();
                     return (
-                      <button key={`${hit.saleId}-${hit.serial}`} className="header-search-item" onClick={() => goToSerialHit(hit)}>
+                      <button key={`${hit.saleId ?? "stock"}-${hit.serial}`} className="header-search-item" onClick={() => goToSerialHit(hit)}>
                         <ShieldCheck size={15} />
                         <span className="header-search-item-name">
                           {hit.productName}
                           <span className="text-muted" style={{ display: "block", fontSize: "var(--font-size-xs)" }}>
-                            {t("header.serialSoldOn", { date: formatDate(hit.soldAt) })}
+                            {hit.inStock
+                              ? t("header.serialInStock")
+                              : `${t("header.serialSoldOn", { date: hit.soldAt ? formatDate(hit.soldAt) : "—" })}${hit.saleNumber ? ` · №${hit.saleNumber}` : ""}`}
                             {hit.customer ? ` · ${hit.customer.name}` : ""}
+                            {hit.returned ? ` · ${t("header.serialReturned")}` : ""}
                           </span>
                         </span>
-                        {hit.warrantyUntil && (
+                        {hit.inStock && <span className="badge badge-info">{t("header.inStockBadge")}</span>}
+                        {!hit.inStock && hit.warrantyUntil && (
                           <span className={`badge ${warrantyActive ? "badge-success" : "badge-neutral"}`}>
                             {warrantyActive
                               ? t("header.warrantyUntil", { date: formatDate(hit.warrantyUntil) })

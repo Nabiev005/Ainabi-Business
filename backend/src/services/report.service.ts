@@ -6,7 +6,7 @@ import { ReportQuery } from "../validators/report.validator";
 export async function buildReport(businessId: string, query: ReportQuery) {
   const { start, end } = resolvePreset(query.preset === "custom" ? undefined : query.preset, query.from, query.to);
 
-  const [sales, expensesAgg, saleItems] = await Promise.all([
+  const [sales, expensesAgg, saleItems, returnsAgg, returnItems, repairsAgg] = await Promise.all([
     prisma.sale.findMany({
       where: { businessId, createdAt: { gte: start, lte: end }, status: "COMPLETED" },
       select: { total: true, costTotal: true, discount: true, createdAt: true },
@@ -19,14 +19,30 @@ export async function buildReport(businessId: string, query: ReportQuery) {
       where: { sale: { businessId, createdAt: { gte: start, lte: end }, status: "COMPLETED" } },
       select: { productId: true, quantity: true, total: true, costPrice: true, product: { select: { name: true } } },
     }),
+    // Returns count against the day the goods came back, not the sale day.
+    prisma.saleReturn.aggregate({
+      where: { businessId, createdAt: { gte: start, lte: end } },
+      _sum: { total: true, costTotal: true },
+    }),
+    prisma.saleReturnItem.findMany({
+      where: { return: { businessId, createdAt: { gte: start, lte: end } } },
+      select: { productId: true, quantity: true, total: true, costTotal: true, product: { select: { name: true } }, return: { select: { createdAt: true } } },
+    }),
+    prisma.repairOrder.aggregate({
+      where: { businessId, status: "DELIVERED", deliveredAt: { gte: start, lte: end } },
+      _sum: { finalPrice: true },
+      _count: true,
+    }),
   ]);
 
-  const totalSales = round2(sales.reduce((sum, s) => sum + toNumber(s.total), 0));
-  const totalCogs = round2(sales.reduce((sum, s) => sum + toNumber(s.costTotal), 0));
+  const totalReturns = round2(toNumber(returnsAgg._sum.total));
+  const totalSales = round2(sales.reduce((sum, s) => sum + toNumber(s.total), 0) - totalReturns);
+  const totalCogs = round2(sales.reduce((sum, s) => sum + toNumber(s.costTotal), 0) - toNumber(returnsAgg._sum.costTotal));
   const totalDiscount = round2(sales.reduce((sum, s) => sum + toNumber(s.discount), 0));
   const totalExpenses = round2(toNumber(expensesAgg._sum.amount));
+  const repairRevenue = round2(toNumber(repairsAgg._sum.finalPrice));
   const grossProfit = round2(totalSales - totalCogs);
-  const netProfit = round2(grossProfit - totalExpenses);
+  const netProfit = round2(grossProfit + repairRevenue - totalExpenses);
   const salesCount = sales.length;
   const avgCheck = salesCount > 0 ? round2(totalSales / salesCount) : 0;
 
@@ -36,6 +52,13 @@ export async function buildReport(businessId: string, query: ReportQuery) {
     entry.quantitySold = round2(entry.quantitySold + toNumber(item.quantity));
     entry.revenue = round2(entry.revenue + toNumber(item.total));
     entry.cost = round2(entry.cost + toNumber(item.costPrice) * toNumber(item.quantity));
+    byProduct.set(item.productId, entry);
+  }
+  for (const item of returnItems) {
+    const entry = byProduct.get(item.productId) ?? { name: item.product.name, quantitySold: 0, revenue: 0, cost: 0 };
+    entry.quantitySold = round2(entry.quantitySold - toNumber(item.quantity));
+    entry.revenue = round2(entry.revenue - toNumber(item.total));
+    entry.cost = round2(entry.cost - toNumber(item.costTotal));
     byProduct.set(item.productId, entry);
   }
 
@@ -60,6 +83,16 @@ export async function buildReport(businessId: string, query: ReportQuery) {
     entry.sales = round2(entry.sales + toNumber(s.total));
     dayMap.set(key, entry);
   }
+  const returnsByDay = new Map<string, number>();
+  for (const item of returnItems) {
+    const key = item.return.createdAt.toISOString().slice(0, 10);
+    returnsByDay.set(key, (returnsByDay.get(key) ?? 0) + toNumber(item.total));
+  }
+  for (const [key, amount] of returnsByDay) {
+    const entry = dayMap.get(key) ?? { sales: 0, expenses: 0 };
+    entry.sales = round2(entry.sales - amount);
+    dayMap.set(key, entry);
+  }
   const expenses = await prisma.expense.findMany({ where: { businessId, createdAt: { gte: start, lte: end } } });
   for (const e of expenses) {
     const key = e.createdAt.toISOString().slice(0, 10);
@@ -80,6 +113,9 @@ export async function buildReport(businessId: string, query: ReportQuery) {
       totalExpenses,
       totalCogs,
       totalDiscount,
+      totalReturns,
+      repairRevenue,
+      repairsCount: repairsAgg._count,
       salesCount,
       avgCheck,
     },

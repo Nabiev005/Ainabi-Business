@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
-import { createSaleSchema, saleQuerySchema } from "../validators/sale.validator";
+import { createReturnSchema, createSaleSchema, saleQuerySchema } from "../validators/sale.validator";
 import * as saleService from "../services/sale.service";
 
 export const listHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -23,4 +23,10 @@ export const createHandler = asyncHandler(async (req: Request, res: Response) =>
   const input = createSaleSchema.parse(req.body);
   const sale = await saleService.createSale(req.auth!.businessId, req.auth!.employeeId, input);
   res.status(201).json(sale);
+});
+
+export const createReturnHandler = asyncHandler(async (req: Request, res: Response) => {
+  const input = createReturnSchema.parse(req.body);
+  const result = await saleService.createReturn(req.auth!.businessId, req.auth!.employeeId, req.params.id, input);
+  res.status(201).json(result);
 });

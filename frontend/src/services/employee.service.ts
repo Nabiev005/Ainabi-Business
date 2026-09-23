@@ -12,6 +12,7 @@ export async function inviteEmployee(payload: {
   phone?: string | null;
   password: string;
   role: Exclude<Role, "OWNER">;
+  locationId?: string | null;
 }): Promise<Employee> {
   const { data } = await api.post<Employee>("/employees", payload);
   return data;
@@ -19,7 +20,7 @@ export async function inviteEmployee(payload: {
 
 export async function updateEmployee(
   id: string,
-  payload: { role?: Exclude<Role, "OWNER">; status?: EmployeeStatus },
+  payload: { role?: Exclude<Role, "OWNER">; status?: EmployeeStatus; locationId?: string | null },
 ): Promise<Employee> {
   const { data } = await api.put<Employee>(`/employees/${id}`, payload);
   return data;

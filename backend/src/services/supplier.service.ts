@@ -127,18 +127,19 @@ export async function addSupplierPayment(businessId: string, debtId: string, inp
     throw ApiError.badRequest(`Төлөм суммасы карыздан ашпашы керек (калган: ${remaining} сом).`);
   }
 
-  const newPaid = round2(toNumber(debt.paidAmount) + input.amount);
-  const newRemaining = round2(remaining - input.amount);
-
-  const [payment] = await prisma.$transaction([
-    prisma.supplierPayment.create({
-      data: { supplierDebtId: debtId, amount: input.amount, method: input.method, comment: input.comment || null },
-    }),
-    prisma.supplierDebt.update({
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.supplierDebt.updateMany({
+      where: { id: debtId, remainingAmount: { gte: input.amount } },
+      data: { paidAmount: { increment: input.amount }, remainingAmount: { decrement: input.amount } },
+    });
+    if (count === 0) throw ApiError.badRequest(`Төлөм суммасы карыздан ашпашы керек (калган: ${remaining} сом).`);
+    const updated = await tx.supplierDebt.findUniqueOrThrow({ where: { id: debtId } });
+    await tx.supplierDebt.update({
       where: { id: debtId },
-      data: { paidAmount: newPaid, remainingAmount: newRemaining, status: newRemaining <= 0 ? "PAID" : "PARTIAL" },
-    }),
-  ]);
-
-  return payment;
+      data: { status: toNumber(updated.remainingAmount) <= 0 ? "PAID" : "PARTIAL" },
+    });
+    return tx.supplierPayment.create({
+      data: { supplierDebtId: debtId, amount: input.amount, method: input.method, comment: input.comment || null },
+    });
+  });
 }

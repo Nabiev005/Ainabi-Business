@@ -451,3 +451,36 @@
 .landing-footer-link:hover {
   color: var(--color-primary-600);
 }
+
+/* ---------- Industries & capabilities ---------- */
+.landing-industries {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+.landing-industry {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.landing-industry h3 {
+  margin: 0 0 4px;
+  font-size: var(--font-size-md);
+}
+.landing-industry p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+.landing-industry .landing-feature-icon {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+.landing-capabilities {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}

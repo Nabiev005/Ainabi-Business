@@ -27,6 +27,12 @@ const Reports = lazy(() => import("./pages/Reports/Reports"));
 const Employees = lazy(() => import("./pages/Employees/Employees"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 const Support = lazy(() => import("./pages/Support/Support"));
+const Sales = lazy(() => import("./pages/Sales/Sales"));
+const Receiving = lazy(() => import("./pages/Receiving/Receiving"));
+const Inventory = lazy(() => import("./pages/Inventory/Inventory"));
+const Labels = lazy(() => import("./pages/Labels/Labels"));
+const Repairs = lazy(() => import("./pages/Repairs/Repairs"));
+const Shifts = lazy(() => import("./pages/Shifts/Shifts"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
 function PageFallback() {
@@ -56,6 +62,12 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/pos" element={<Pos />} />
+                  <Route path="/sales" element={<Sales />} />
+                  <Route path="/shifts" element={<Shifts />} />
+                  <Route path="/repairs" element={<Repairs />} />
+                  <Route path="/receiving" element={<Receiving />} />
+                  <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/labels" element={<Labels />} />
                   <Route path="/products" element={<Products />} />
                   <Route path="/stock" element={<Stock />} />
                   <Route path="/customers" element={<Customers />} />

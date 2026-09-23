@@ -14,6 +14,7 @@ const googleClient = new OAuth2Client(env.google.clientId);
 function serializeSession(employee: {
   id: string;
   role: "OWNER" | "ADMIN" | "CASHIER";
+  locationId?: string | null;
   business: { id: string; name: string; currency: string; phone?: string | null; address?: string | null; qrPaymentInfo?: string | null };
   user: { id: string; name: string; email: string; phone: string | null; avatarUrl: string | null; provider: string };
 }) {
@@ -22,6 +23,7 @@ function serializeSession(employee: {
     business: employee.business,
     role: employee.role,
     employeeId: employee.id,
+    locationId: employee.locationId ?? null,
   };
 }
 

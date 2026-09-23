@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Award, Download, Percent, Receipt, ShoppingBag, TrendingUp, Trophy, Wallet } from "lucide-react";
+import { Award, Download, Percent, Receipt, ShoppingBag, TrendingUp, Trophy, Undo2, Wallet, Wrench } from "lucide-react";
 import { KpiCard } from "../../components/ui/KpiCard";
 import { Skeleton, SkeletonRows } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -93,6 +93,12 @@ export default function Reports() {
             <KpiCard index={3} label={t("reports.kpi.totalCogs")} value={formatMoney(report.summary.totalCogs)} icon={ShoppingBag} accent="warning" />
             <KpiCard index={4} label={t("reports.kpi.avgCheck")} value={formatMoney(report.summary.avgCheck)} icon={Percent} accent="primary" />
             <KpiCard index={5} label={t("reports.kpi.salesCount")} value={formatNumber(report.summary.salesCount)} icon={Award} accent="primary" />
+            {report.summary.totalReturns > 0 && (
+              <KpiCard index={6} label={t("reports.kpi.totalReturns")} value={formatMoney(report.summary.totalReturns)} icon={Undo2} accent="danger" />
+            )}
+            {report.summary.repairsCount > 0 && (
+              <KpiCard index={7} label={t("reports.kpi.repairRevenue", { count: report.summary.repairsCount })} value={formatMoney(report.summary.repairRevenue)} icon={Wrench} accent="success" />
+            )}
           </div>
 
           <div className="dashboard-bottom-grid">

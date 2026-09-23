@@ -18,7 +18,7 @@ function previousRange(start: Date, end: Date) {
 }
 
 async function periodTotals(businessId: string, start: Date, end: Date) {
-  const [salesAgg, salesCount, expensesAgg] = await Promise.all([
+  const [salesAgg, salesCount, expensesAgg, returnsAgg, repairsAgg] = await Promise.all([
     prisma.sale.aggregate({
       where: { businessId, createdAt: { gte: start, lte: end }, status: "COMPLETED" },
       _sum: { total: true, costTotal: true },
@@ -28,13 +28,22 @@ async function periodTotals(businessId: string, start: Date, end: Date) {
       where: { businessId, createdAt: { gte: start, lte: end } },
       _sum: { amount: true },
     }),
+    prisma.saleReturn.aggregate({
+      where: { businessId, createdAt: { gte: start, lte: end } },
+      _sum: { total: true, costTotal: true },
+    }),
+    prisma.repairOrder.aggregate({
+      where: { businessId, status: "DELIVERED", deliveredAt: { gte: start, lte: end } },
+      _sum: { finalPrice: true },
+    }),
   ]);
 
-  const revenue = toNumber(salesAgg._sum.total);
-  const cost = toNumber(salesAgg._sum.costTotal);
+  // Net of returns; repair income counts towards profit.
+  const revenue = round2(toNumber(salesAgg._sum.total) - toNumber(returnsAgg._sum.total));
+  const cost = round2(toNumber(salesAgg._sum.costTotal) - toNumber(returnsAgg._sum.costTotal));
   const expenses = toNumber(expensesAgg._sum.amount);
   const grossProfit = round2(revenue - cost);
-  const netProfit = round2(grossProfit - expenses);
+  const netProfit = round2(grossProfit + toNumber(repairsAgg._sum.finalPrice) - expenses);
 
   return { revenue, salesCount, expenses, grossProfit, netProfit };
 }
@@ -150,4 +159,58 @@ export async function getLowStock(businessId: string, limit = 8) {
       unit: p.unit,
       status: toNumber(p.quantity) <= 0 ? "OUT" : "LOW",
     }));
+}
+
+/**
+ * "Needs attention" panel: expiring batches, repairs waiting for pickup,
+ * the viewer's open shift. Only includes what the business has switched on.
+ */
+export async function getAlerts(businessId: string, employeeId: string) {
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 30);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [expiring, readyRepairs, activeRepairs, openShift, lowStock] = await Promise.all([
+    business.trackExpiry
+      ? prisma.productBatch.findMany({
+          where: { businessId, quantity: { gt: 0 }, expiryDate: { not: null, lte: soon }, product: { status: "ACTIVE" } },
+          include: { product: true },
+          orderBy: { expiryDate: "asc" },
+          take: 8,
+        })
+      : Promise.resolve([]),
+    business.enableRepairs ? prisma.repairOrder.count({ where: { businessId, status: "READY" } }) : Promise.resolve(0),
+    business.enableRepairs
+      ? prisma.repairOrder.count({ where: { businessId, status: { in: ["RECEIVED", "IN_PROGRESS"] } } })
+      : Promise.resolve(0),
+    prisma.cashShift.findFirst({ where: { businessId, employeeId, status: "OPEN" } }),
+    getLowStock(businessId, 100),
+  ]);
+
+  const expiredCount = business.trackExpiry
+    ? await prisma.productBatch.count({ where: { businessId, quantity: { gt: 0 }, expiryDate: { lt: today } } })
+    : 0;
+
+  return {
+    modules: {
+      trackExpiry: business.trackExpiry,
+      enableRepairs: business.enableRepairs,
+      requireShift: business.requireShift,
+    },
+    expiringBatches: expiring.map((b) => ({
+      id: b.id,
+      productName: b.product.name,
+      unit: b.product.unit,
+      quantity: toNumber(b.quantity),
+      expiryDate: b.expiryDate,
+      daysLeft: b.expiryDate ? Math.ceil((b.expiryDate.getTime() - today.getTime()) / 86_400_000) : null,
+    })),
+    expiredCount,
+    readyRepairs,
+    activeRepairs,
+    openShift: openShift ? { id: openShift.id, openedAt: openShift.openedAt } : null,
+    lowStockCount: lowStock.length,
+  };
 }

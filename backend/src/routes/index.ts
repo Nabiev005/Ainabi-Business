@@ -12,6 +12,8 @@ import employeeRoutes from "./employee.routes";
 import reportRoutes from "./report.routes";
 import settingsRoutes from "./settings.routes";
 import supplierRoutes from "./supplier.routes";
+import repairRoutes from "./repair.routes";
+import shiftRoutes from "./shift.routes";
 
 const router = Router();
 
@@ -28,5 +30,7 @@ router.use("/employees", employeeRoutes);
 router.use("/reports", reportRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/suppliers", supplierRoutes);
+router.use("/repairs", repairRoutes);
+router.use("/shifts", shiftRoutes);
 
 export default router;

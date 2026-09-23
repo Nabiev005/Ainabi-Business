@@ -138,3 +138,31 @@
   line-height: 1.5;
   white-space: nowrap;
 }
+
+/* ---------- Packages editor ---------- */
+.package-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+.input-suffix {
+  position: relative;
+}
+.input-suffix span {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+.input-suffix .input {
+  padding-right: 40px;
+}
+@media (max-width: 560px) {
+  .package-row {
+    grid-template-columns: 1fr 1fr auto;
+  }
+}

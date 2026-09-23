@@ -15,13 +15,27 @@ import {
   LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
+  ScrollText,
+  PackagePlus,
+  ClipboardCheck,
+  Wrench,
+  Coins,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import type { Session } from "../types";
 
-const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean }> = [
+const isManager = (s: Session) => s.role !== "CASHIER";
+
+const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show?: (s: Session) => boolean }> = [
   { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, end: true },
   { to: "/pos", key: "pos", icon: ShoppingCart },
+  { to: "/sales", key: "sales", icon: ScrollText },
+  { to: "/shifts", key: "shifts", icon: Coins },
+  { to: "/repairs", key: "repairs", icon: Wrench, show: (s) => !!s.business.enableRepairs },
   { to: "/products", key: "products", icon: Package },
   { to: "/stock", key: "stock", icon: Warehouse },
+  { to: "/receiving", key: "receiving", icon: PackagePlus, show: isManager },
+  { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: isManager },
   { to: "/customers", key: "customers", icon: Users },
   { to: "/debts", key: "debts", icon: Wallet },
   { to: "/suppliers", key: "suppliers", icon: Truck },
@@ -39,6 +53,8 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile }: SidebarProps) {
   const { t } = useTranslation();
+  const { session } = useAuth();
+  const items = NAV_ITEMS.filter((item) => !item.show || (session && item.show(session)));
 
   return (
     <>
@@ -50,7 +66,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
+          {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

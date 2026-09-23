@@ -27,6 +27,7 @@ export async function listCustomers(businessId: string, search?: string) {
       name: c.name,
       phone: c.phone,
       notes: c.notes,
+      isWholesale: c.isWholesale,
       purchaseCount: c.sales.length,
       totalSpent,
       debt,
@@ -51,6 +52,7 @@ export async function getCustomer(businessId: string, id: string) {
     name: customer.name,
     phone: customer.phone,
     notes: customer.notes,
+    isWholesale: customer.isWholesale,
     createdAt: customer.createdAt,
     sales: customer.sales.map((s) => ({
       id: s.id,
@@ -79,13 +81,18 @@ export async function getCustomer(businessId: string, id: string) {
 }
 
 export function createCustomer(businessId: string, input: CustomerInput) {
-  return prisma.customer.create({ data: { businessId, name: input.name, phone: input.phone || null, notes: input.notes || null } });
+  return prisma.customer.create({
+    data: { businessId, name: input.name, phone: input.phone || null, notes: input.notes || null, isWholesale: input.isWholesale },
+  });
 }
 
 export async function updateCustomer(businessId: string, id: string, input: CustomerInput) {
   const existing = await prisma.customer.findFirst({ where: { id, businessId } });
   if (!existing) throw ApiError.notFound("Кардар табылган жок.");
-  return prisma.customer.update({ where: { id }, data: { name: input.name, phone: input.phone || null, notes: input.notes || null } });
+  return prisma.customer.update({
+    where: { id },
+    data: { name: input.name, phone: input.phone || null, notes: input.notes || null, isWholesale: input.isWholesale },
+  });
 }
 
 export async function deleteCustomer(businessId: string, id: string) {

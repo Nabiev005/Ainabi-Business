@@ -3,10 +3,16 @@ import { ApiError } from "../utils/ApiError";
 import { hashPassword } from "../utils/password";
 import { InviteEmployeeInput, UpdateEmployeeInput } from "../validators/employee.validator";
 
+async function assertLocation(businessId: string, locationId: string | null | undefined) {
+  if (!locationId) return;
+  const location = await prisma.location.findFirst({ where: { id: locationId, businessId, archived: false } });
+  if (!location) throw ApiError.badRequest("Филиал табылган жок.");
+}
+
 export async function listEmployees(businessId: string) {
   const employees = await prisma.employee.findMany({
     where: { businessId },
-    include: { user: true },
+    include: { user: true, location: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -17,12 +23,15 @@ export async function listEmployees(businessId: string) {
     phone: e.user.phone,
     role: e.role,
     status: e.status,
+    locationId: e.locationId,
+    locationName: e.location?.name ?? null,
     lastLoginAt: e.lastLoginAt,
     createdAt: e.createdAt,
   }));
 }
 
 export async function inviteEmployee(businessId: string, input: InviteEmployeeInput) {
+  await assertLocation(businessId, input.locationId);
   let user = await prisma.user.findUnique({ where: { email: input.email } });
 
   if (user) {
@@ -38,8 +47,8 @@ export async function inviteEmployee(businessId: string, input: InviteEmployeeIn
   }
 
   const employee = await prisma.employee.create({
-    data: { userId: user.id, businessId, role: input.role, status: "ACTIVE" },
-    include: { user: true },
+    data: { userId: user.id, businessId, role: input.role, status: "ACTIVE", locationId: input.locationId || null },
+    include: { user: true, location: true },
   });
 
   return {
@@ -49,6 +58,8 @@ export async function inviteEmployee(businessId: string, input: InviteEmployeeIn
     phone: employee.user.phone,
     role: employee.role,
     status: employee.status,
+    locationId: employee.locationId,
+    locationName: employee.location?.name ?? null,
     lastLoginAt: employee.lastLoginAt,
     createdAt: employee.createdAt,
   };
@@ -57,12 +68,18 @@ export async function inviteEmployee(businessId: string, input: InviteEmployeeIn
 export async function updateEmployee(businessId: string, id: string, input: UpdateEmployeeInput) {
   const employee = await prisma.employee.findFirst({ where: { id, businessId } });
   if (!employee) throw ApiError.notFound("Кызматкер табылган жок.");
-  if (employee.role === "OWNER") throw ApiError.forbidden("Ээнин ролун өзгөртүүгө болбойт.");
+  // The owner's role/status are fixed, but their branch can change.
+  if (employee.role === "OWNER" && (input.role || input.status)) throw ApiError.forbidden("Ээнин ролун өзгөртүүгө болбойт.");
+  await assertLocation(businessId, input.locationId);
 
   const updated = await prisma.employee.update({
     where: { id },
-    data: { role: input.role, status: input.status },
-    include: { user: true },
+    data: {
+      role: input.role,
+      status: input.status,
+      ...(input.locationId !== undefined ? { locationId: input.locationId || null } : {}),
+    },
+    include: { user: true, location: true },
   });
 
   return {
@@ -72,6 +89,8 @@ export async function updateEmployee(businessId: string, id: string, input: Upda
     phone: updated.user.phone,
     role: updated.role,
     status: updated.status,
+    locationId: updated.locationId,
+    locationName: updated.location?.name ?? null,
     lastLoginAt: updated.lastLoginAt,
     createdAt: updated.createdAt,
   };

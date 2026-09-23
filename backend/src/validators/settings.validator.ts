@@ -34,6 +34,16 @@ export const updateProductConfigSchema = z.object({
   productFields: productFieldsSchema,
   trackSerials: z.boolean(),
   trackWarranty: z.boolean(),
+  trackExpiry: z.boolean().optional(),
+  enableRepairs: z.boolean().optional(),
+  requireShift: z.boolean().optional(),
+  weightBarcodes: z.boolean().optional(),
+  checkPrescription: z.boolean().optional(),
+});
+
+export const locationSchema = z.object({
+  name: z.string().trim().min(1, "Филиалдын атын жазыңыз").max(80),
+  address: z.string().trim().max(200).optional().nullable(),
 });
 
 export const applyTemplateSchema = z.object({
@@ -46,6 +56,7 @@ export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
 export type ProductFieldDef = z.infer<typeof productFieldSchema>;
 export type UpdateProductConfigInput = z.infer<typeof updateProductConfigSchema>;
 export type ApplyTemplateInput = z.infer<typeof applyTemplateSchema>;
+export type LocationInput = z.infer<typeof locationSchema>;
 
 /** Business.productFields is a Json column — read it back defensively so a
  * hand-edited/corrupt value degrades to "no custom fields", never a 500. */

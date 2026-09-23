@@ -24,7 +24,25 @@ interface TemplateField {
   showInList?: boolean;
 }
 
-interface BusinessTemplate {
+export interface TemplateModules {
+  trackSerials: boolean;
+  trackWarranty: boolean;
+  trackExpiry: boolean;
+  enableRepairs: boolean;
+  weightBarcodes: boolean;
+  checkPrescription: boolean;
+}
+
+export const MODULE_KEYS: (keyof TemplateModules)[] = [
+  "trackSerials",
+  "trackWarranty",
+  "trackExpiry",
+  "enableRepairs",
+  "weightBarcodes",
+  "checkPrescription",
+];
+
+interface BusinessTemplate extends Partial<TemplateModules> {
   id: string;
   name: Localized<string>;
   description: Localized<string>;
@@ -52,7 +70,6 @@ const modelField: TemplateField = { key: "model", label: { ky: "Модели", r
 const colorField: TemplateField = { key: "color", label: { ky: "Түсү", ru: "Цвет" }, type: "text", showInList: true };
 const conditionField: TemplateField = { key: "condition", label: { ky: "Абалы", ru: "Состояние" }, type: "select", options: CONDITION, showInList: true };
 const manufacturerField: TemplateField = { key: "manufacturer", label: { ky: "Өндүрүүчү", ru: "Производитель" }, type: "text" };
-const expiryField: TemplateField = { key: "expiryDate", label: { ky: "Жарактуулук мөөнөтү", ru: "Срок годности" }, type: "date", showInList: true };
 
 export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
@@ -68,10 +85,11 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     id: "PHONES",
     name: { ky: "Телефон дүкөнү", ru: "Магазин телефонов" },
-    description: { ky: "IMEI эсеби, кепилдик, эс тутум, түс, абалы", ru: "Учёт IMEI, гарантия, память, цвет, состояние" },
+    description: { ky: "IMEI эсеби, кепилдик, ремонт, trade-in, эс тутум, түс", ru: "Учёт IMEI, гарантия, ремонт, trade-in, память, цвет" },
     icon: "smartphone",
     trackSerials: true,
     trackWarranty: true,
+    enableRepairs: true,
     categories: {
       ky: ["Смартфондор", "Кнопкалуу телефондор", "Планшеттер", "Кулакчындар", "Кубаттагычтар", "Чехолдор", "Аксессуарлар"],
       ru: ["Смартфоны", "Кнопочные телефоны", "Планшеты", "Наушники", "Зарядные устройства", "Чехлы", "Аксессуары"],
@@ -88,10 +106,11 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     id: "LAPTOPS",
     name: { ky: "Ноутбук жана компьютер", ru: "Ноутбуки и компьютеры" },
-    description: { ky: "Сериялык номер, кепилдик, процессор, RAM, SSD", ru: "Серийный номер, гарантия, процессор, ОЗУ, SSD" },
+    description: { ky: "Сериялык номер, кепилдик, ремонт, процессор, RAM, SSD", ru: "Серийный номер, гарантия, ремонт, процессор, ОЗУ, SSD" },
     icon: "laptop",
     trackSerials: true,
     trackWarranty: true,
+    enableRepairs: true,
     categories: {
       ky: ["Ноутбуктар", "Компьютерлер", "Мониторлор", "Комплектөөчүлөр", "Чычкан жана клавиатура", "Принтерлер", "Аксессуарлар"],
       ru: ["Ноутбуки", "Компьютеры", "Мониторы", "Комплектующие", "Мыши и клавиатуры", "Принтеры", "Аксессуары"],
@@ -110,10 +129,11 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     id: "APPLIANCES",
     name: { ky: "Тиричилик техникасы", ru: "Бытовая техника" },
-    description: { ky: "Сериялык номер, кепилдик, бренд, кубаттуулук", ru: "Серийный номер, гарантия, бренд, мощность" },
+    description: { ky: "Сериялык номер, кепилдик, сервис, бренд, кубаттуулук", ru: "Серийный номер, гарантия, сервис, бренд, мощность" },
     icon: "tv",
     trackSerials: true,
     trackWarranty: true,
+    enableRepairs: true,
     categories: {
       ky: ["Чоң техника", "Кичи техника", "Телевизорлор", "Аудио", "Ашкана техникасы", "Климат техникасы"],
       ru: ["Крупная техника", "Мелкая техника", "Телевизоры", "Аудио", "Кухонная техника", "Климатическая техника"],
@@ -128,7 +148,7 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     id: "CLOTHING",
     name: { ky: "Кийим жана бут кийим", ru: "Одежда и обувь" },
-    description: { ky: "Өлчөм, түс, материал, жыныс, мезгил", ru: "Размер, цвет, материал, пол, сезон" },
+    description: { ky: "Өлчөм × түс варианттары, материал, мезгил", ru: "Варианты размер × цвет, материал, сезон" },
     icon: "shirt",
     trackSerials: false,
     trackWarranty: false,
@@ -158,41 +178,45 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     id: "GROCERY",
     name: { ky: "Азык-түлүк", ru: "Продукты" },
-    description: { ky: "Жарактуулук мөөнөтү, өндүрүүчү", ru: "Срок годности, производитель" },
+    description: { ky: "Партия жана жарактуулук мөөнөтү, тараза штрих-коду", ru: "Партии и сроки годности, весовые штрих-коды" },
     icon: "shopping-basket",
     trackSerials: false,
     trackWarranty: false,
+    trackExpiry: true,
+    weightBarcodes: true,
     categories: {
       ky: ["Сүт азыктары", "Нан азыктары", "Эт азыктары", "Суусундуктар", "Таттуулар", "Жашылча-жемиштер", "Тиричилик химиясы"],
       ru: ["Молочные продукты", "Хлебобулочные", "Мясные продукты", "Напитки", "Сладости", "Овощи и фрукты", "Бытовая химия"],
     },
-    fields: [expiryField, manufacturerField],
+    fields: [manufacturerField],
   },
   {
     id: "PHARMACY",
     name: { ky: "Дарыкана", ru: "Аптека" },
-    description: { ky: "Жарактуулук мөөнөтү, дозировка, рецепт", ru: "Срок годности, дозировка, рецепт" },
+    description: { ky: "Партия жана мөөнөт, рецепт текшерүү, пластинка менен сатуу", ru: "Партии и сроки, проверка рецепта, продажа блистерами" },
     icon: "pill",
     trackSerials: false,
     trackWarranty: false,
+    trackExpiry: true,
+    checkPrescription: true,
     categories: {
       ky: ["Дары-дармектер", "Витаминдер", "Медициналык буюмдар", "Гигиена", "Балдар үчүн"],
       ru: ["Лекарства", "Витамины", "Медицинские изделия", "Гигиена", "Для детей"],
     },
     fields: [
-      { ...expiryField, required: true },
       manufacturerField,
       { key: "dosage", label: { ky: "Дозировка", ru: "Дозировка" }, type: "text", showInList: true },
-      { key: "prescription", label: { ky: "Рецепт менен", ru: "По рецепту" }, type: "boolean", showInList: true },
+      { key: "form", label: { ky: "Формасы", ru: "Форма выпуска" }, type: "text" },
     ],
   },
   {
     id: "COSMETICS",
     name: { ky: "Косметика жана парфюмерия", ru: "Косметика и парфюмерия" },
-    description: { ky: "Бренд, көлөмү, жарактуулук мөөнөтү", ru: "Бренд, объём, срок годности" },
+    description: { ky: "Бренд, көлөмү, партия жана жарактуулук мөөнөтү", ru: "Бренд, объём, партии и сроки годности" },
     icon: "sparkles",
     trackSerials: false,
     trackWarranty: false,
+    trackExpiry: true,
     categories: {
       ky: ["Бет үчүн", "Чач үчүн", "Дене үчүн", "Макияж", "Парфюмерия"],
       ru: ["Для лица", "Для волос", "Для тела", "Макияж", "Парфюмерия"],
@@ -200,13 +224,12 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
     fields: [
       { key: "brand", label: { ky: "Бренд", ru: "Бренд" }, type: "text", showInList: true },
       { key: "volume", label: { ky: "Көлөмү (мл/г)", ru: "Объём (мл/г)" }, type: "text", showInList: true },
-      expiryField,
     ],
   },
   {
     id: "AUTO_PARTS",
     name: { ky: "Автозапчасттар", ru: "Автозапчасти" },
-    description: { ky: "Унаа маркасы, модели, жылы, OEM номери, кепилдик", ru: "Марка, модель, год авто, OEM номер, гарантия" },
+    description: { ky: "Унаа маркасы, модели, OEM номери, аналогдор, кепилдик", ru: "Марка и модель авто, OEM номер, аналоги, гарантия" },
     icon: "car",
     trackSerials: false,
     trackWarranty: true,
@@ -225,7 +248,7 @@ export const BUSINESS_TEMPLATES: BusinessTemplate[] = [
   {
     id: "BUILDING",
     name: { ky: "Курулуш материалдары", ru: "Стройматериалы" },
-    description: { ky: "Өндүрүүчү, өлчөмү, түсү", ru: "Производитель, размер, цвет" },
+    description: { ky: "Мешок/кг/даана сыяктуу бир нече бирдик, дүң баа", ru: "Несколько единиц (мешок/кг/шт), оптовая цена" },
     icon: "hammer",
     trackSerials: false,
     trackWarranty: false,
@@ -253,6 +276,10 @@ export function localizeTemplate(template: BusinessTemplate, lang: Lang) {
     icon: template.icon,
     trackSerials: template.trackSerials,
     trackWarranty: template.trackWarranty,
+    trackExpiry: template.trackExpiry ?? false,
+    enableRepairs: template.enableRepairs ?? false,
+    weightBarcodes: template.weightBarcodes ?? false,
+    checkPrescription: template.checkPrescription ?? false,
     categories: template.categories[lang],
     fields: template.fields.map((f) => ({
       key: f.key,

@@ -11,6 +11,9 @@ export interface ReportData {
     totalExpenses: number;
     totalCogs: number;
     totalDiscount: number;
+    totalReturns: number;
+    repairRevenue: number;
+    repairsCount: number;
     salesCount: number;
     avgCheck: number;
   };

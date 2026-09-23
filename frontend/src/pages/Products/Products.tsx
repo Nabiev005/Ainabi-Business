@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Barcode, Package, Plus, Search, SquarePen, Trash2 } from "lucide-react";
+import { Barcode, FileSpreadsheet, Layers, Package, Plus, Search, SquarePen, Tag, Trash2 } from "lucide-react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { SkeletonRows } from "../../components/ui/Skeleton";
 import { Badge } from "../../components/ui/Badge";
 import { Pagination } from "../../components/ui/Pagination";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { ProductDrawer, ProductFormValues } from "./ProductDrawer";
+import { ImportModal } from "./ImportModal";
+import { VariantGroupDrawer } from "./VariantGroupDrawer";
 import { useToast } from "../../hooks/useToast";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import * as productService from "../../services/product.service";
@@ -23,7 +25,11 @@ export default function Products() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const productFields = session?.business.productFields;
+  const canManage = session?.role !== "CASHIER";
+  const [importOpen, setImportOpen] = useState(false);
+  const [variantsOpen, setVariantsOpen] = useState(false);
   const [products, setProducts] = useState<Product[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [total, setTotal] = useState(0);
@@ -33,7 +39,10 @@ export default function Products() {
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const debouncedSearch = useDebouncedValue(search);
   const [categoryId, setCategoryId] = useState("");
-  const [stockFilter, setStockFilter] = useState<"" | "low" | "out">("");
+  const [stockFilter, setStockFilter] = useState<"" | "low" | "out">(() => {
+    const fromUrl = searchParams.get("stock");
+    return fromUrl === "low" || fromUrl === "out" ? fromUrl : "";
+  });
   const [statusFilter, setStatusFilter] = useState<"" | "ACTIVE" | "ARCHIVED">("ACTIVE");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -126,16 +135,34 @@ export default function Products() {
           <h1 className="page-title">{t("products.title")}</h1>
           <p className="page-subtitle">{t("products.subtitle")}</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setDrawerOpen(true);
-          }}
-        >
-          <Plus size={18} />
-          {t("products.add")}
-        </button>
+        <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+          <button className="btn btn-secondary" onClick={() => navigate("/labels")}>
+            <Tag size={18} />
+            {t("products.labels")}
+          </button>
+          {canManage && (
+            <>
+              <button className="btn btn-secondary" onClick={() => setImportOpen(true)}>
+                <FileSpreadsheet size={18} />
+                {t("products.importButton")}
+              </button>
+              <button className="btn btn-secondary" onClick={() => setVariantsOpen(true)}>
+                <Layers size={18} />
+                {t("products.addVariants")}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setEditing(null);
+                  setDrawerOpen(true);
+                }}
+              >
+                <Plus size={18} />
+                {t("products.add")}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="card">
@@ -257,6 +284,9 @@ export default function Products() {
                       </td>
                       <td>
                         <div className="table-actions">
+                          <button className="btn btn-ghost btn-icon btn-sm" title={t("products.labelTooltip")} onClick={() => navigate(`/labels?product=${p.id}`)}>
+                            <Tag size={16} />
+                          </button>
                           <button
                             className="btn btn-ghost btn-icon btn-sm"
                             title={t("products.editTooltip")}
@@ -289,6 +319,17 @@ export default function Products() {
         categories={categories}
         product={editing}
         submitting={submitting}
+      />
+
+      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onDone={loadProducts} />
+      <VariantGroupDrawer
+        open={variantsOpen}
+        onClose={() => setVariantsOpen(false)}
+        categories={categories}
+        onDone={() => {
+          setVariantsOpen(false);
+          loadProducts();
+        }}
       />
 
       <ConfirmDialog

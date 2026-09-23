@@ -12,6 +12,7 @@ import { useLabels } from "../../hooks/useLabels";
 import * as employeeService from "../../services/employee.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDateTime } from "../../utils/format";
+import { useLocations } from "../../hooks/useLocations";
 import type { Employee, Role } from "../../types";
 
 export default function Employees() {
@@ -26,6 +27,17 @@ export default function Employees() {
   const [deleting, setDeleting] = useState(false);
 
   const canManage = session?.role === "OWNER" || session?.role === "ADMIN";
+  const { locations, multiple } = useLocations();
+
+  async function handleLocationChange(employee: Employee, locationId: string) {
+    try {
+      await employeeService.updateEmployee(employee.id, { locationId: locationId || null });
+      showToast({ variant: "success", title: t("employees.locationChanged") });
+      load();
+    } catch (error) {
+      showToast({ variant: "error", title: t("common.saveFailed"), message: extractErrorMessage(error) });
+    }
+  }
 
   const load = useCallback(() => {
     setEmployees(null);
@@ -119,6 +131,7 @@ export default function Employees() {
                   <th>{t("employees.table.contact")}</th>
                   <th>{t("employees.table.role")}</th>
                   <th>{t("employees.table.status")}</th>
+                  {multiple && <th>{t("employees.table.location")}</th>}
                   <th>{t("employees.table.lastLogin")}</th>
                   <th></th>
                 </tr>
@@ -155,6 +168,22 @@ export default function Employees() {
                         <Badge variant={e.status === "ACTIVE" ? "success" : "neutral"}>{labels.employeeStatus[e.status]}</Badge>
                       )}
                     </td>
+                    {multiple && (
+                      <td>
+                        {canManage ? (
+                          <select className="select" style={{ height: 32, minWidth: 140 }} value={e.locationId ?? ""} onChange={(ev) => handleLocationChange(e, ev.target.value)}>
+                            <option value="">{t("employees.defaultLocation")}</option>
+                            {locations.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          (e.locationName ?? t("employees.defaultLocation"))
+                        )}
+                      </td>
+                    )}
                     <td className="text-muted">{e.lastLoginAt ? formatDateTime(e.lastLoginAt) : t("employees.neverLoggedIn")}</td>
                     <td>
                       {canManage && e.role !== "OWNER" && (

@@ -24,7 +24,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import * as settingsService from "../../services/settings.service";
 import { extractErrorMessage } from "../../services/api";
-import type { Business, BusinessTemplate, ProductFieldDef, ProductFieldType } from "../../types";
+import type { Business, BusinessModules, BusinessTemplate, ProductFieldDef, ProductFieldType } from "../../types";
 import "./Settings.css";
 
 const TEMPLATE_ICONS: Record<string, LucideIcon> = {
@@ -41,6 +41,28 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
 };
 
 const FIELD_TYPES: ProductFieldType[] = ["text", "number", "select", "boolean", "date"];
+
+const MODULE_KEYS: (keyof BusinessModules)[] = [
+  "trackSerials",
+  "trackWarranty",
+  "trackExpiry",
+  "weightBarcodes",
+  "checkPrescription",
+  "enableRepairs",
+  "requireShift",
+];
+
+function modulesOf(business: Business | null): BusinessModules {
+  return {
+    trackSerials: !!business?.trackSerials,
+    trackWarranty: !!business?.trackWarranty,
+    trackExpiry: !!business?.trackExpiry,
+    enableRepairs: !!business?.enableRepairs,
+    requireShift: !!business?.requireShift,
+    weightBarcodes: !!business?.weightBarcodes,
+    checkPrescription: !!business?.checkPrescription,
+  };
+}
 
 /** Editable row — select options are edited as one comma-separated string
  * so typing "8GB, 16GB" doesn't get reformatted under the cursor. */
@@ -72,8 +94,7 @@ export function ProductSetup({ business, onBusinessChange }: ProductSetupProps) 
   const [applying, setApplying] = useState(false);
 
   const [rows, setRows] = useState<FieldRow[]>([]);
-  const [trackSerials, setTrackSerials] = useState(false);
-  const [trackWarranty, setTrackWarranty] = useState(false);
+  const [modules, setModules] = useState<BusinessModules>(modulesOf(null));
   const [saving, setSaving] = useState(false);
 
   // Template labels come back in the request language — refetch on switch.
@@ -85,8 +106,7 @@ export function ProductSetup({ business, onBusinessChange }: ProductSetupProps) 
     if (!business) return;
     setSelectedType(business.businessType ?? "GENERAL");
     setRows(toRows(business.productFields));
-    setTrackSerials(!!business.trackSerials);
-    setTrackWarranty(!!business.trackWarranty);
+    setModules(modulesOf(business));
   }, [business]);
 
   const selectedTemplate = templates.find((tpl) => tpl.id === selectedType);
@@ -155,7 +175,7 @@ export function ProductSetup({ business, onBusinessChange }: ProductSetupProps) 
 
     setSaving(true);
     try {
-      const updated = await settingsService.updateProductConfig({ productFields, trackSerials, trackWarranty });
+      const updated = await settingsService.updateProductConfig({ productFields, ...modules });
       onBusinessChange(updated);
       showToast({ variant: "success", title: t("settings.saved") });
     } catch (error) {
@@ -244,32 +264,32 @@ export function ProductSetup({ business, onBusinessChange }: ProductSetupProps) 
 
       <div className="card">
         <div className="card-header">
-          <h2 className="card-title">{t("settings.productSetup.fieldsTitle")}</h2>
+          <h2 className="card-title">{t("settings.productSetup.modulesTitle")}</h2>
         </div>
         <div className="card-pad stack gap-4">
           <p className="text-muted" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
-            {t("settings.productSetup.fieldsHint")}
+            {t("settings.productSetup.modulesHint")}
           </p>
 
-          <div className="stack gap-2">
-            <label className="setup-check">
-              <input type="checkbox" checked={trackSerials} onChange={(e) => setTrackSerials(e.target.checked)} />
-              <span>
-                <strong>{t("settings.productSetup.trackSerials")}</strong>
-                <span className="field-hint" style={{ display: "block" }}>
-                  {t("settings.productSetup.trackSerialsHint")}
+          <div className="modules-grid">
+            {MODULE_KEYS.map((key) => (
+              <label key={key} className={`module-toggle ${modules[key] ? "on" : ""}`}>
+                <input type="checkbox" checked={modules[key]} onChange={(e) => setModules((m) => ({ ...m, [key]: e.target.checked }))} />
+                <span>
+                  <strong>{t(`settings.productSetup.modules.${key}.title`)}</strong>
+                  <span className="field-hint" style={{ display: "block" }}>
+                    {t(`settings.productSetup.modules.${key}.hint`)}
+                  </span>
                 </span>
-              </span>
-            </label>
-            <label className="setup-check">
-              <input type="checkbox" checked={trackWarranty} onChange={(e) => setTrackWarranty(e.target.checked)} />
-              <span>
-                <strong>{t("settings.productSetup.trackWarranty")}</strong>
-                <span className="field-hint" style={{ display: "block" }}>
-                  {t("settings.productSetup.trackWarrantyHint")}
-                </span>
-              </span>
-            </label>
+              </label>
+            ))}
+          </div>
+
+          <div className="stack gap-1" style={{ marginTop: "var(--space-2)" }}>
+            <h3 className="card-title" style={{ fontSize: "var(--font-size-md)" }}>{t("settings.productSetup.fieldsTitle")}</h3>
+            <p className="text-muted" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
+              {t("settings.productSetup.fieldsHint")}
+            </p>
           </div>
 
           {rows.length === 0 ? (

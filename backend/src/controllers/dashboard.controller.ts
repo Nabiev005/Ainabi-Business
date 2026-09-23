@@ -21,6 +21,10 @@ export const topProductsHandler = asyncHandler(async (req: Request, res: Respons
   res.json(result);
 });
 
+export const alertsHandler = asyncHandler(async (req: Request, res: Response) => {
+  res.json(await dashboardService.getAlerts(req.auth!.businessId, req.auth!.employeeId));
+});
+
 export const lowStockHandler = asyncHandler(async (req: Request, res: Response) => {
   const result = await dashboardService.getLowStock(req.auth!.businessId);
   res.json(result);

@@ -25,6 +25,7 @@ import * as dashboardService from "../../services/dashboard.service";
 import * as productService from "../../services/product.service";
 import type { DashboardRange, DashboardSummary, LowStockProduct, Product, SalesDynamicsPoint, TopProduct } from "../../types";
 import "../../layouts/layout.css";
+import { AlertsCard } from "./AlertsCard";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -94,6 +95,8 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      <AlertsCard />
 
       <div className="kpi-grid">
         {loading || !summary ? (

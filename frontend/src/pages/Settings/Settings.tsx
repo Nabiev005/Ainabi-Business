@@ -8,6 +8,7 @@ import * as settingsService from "../../services/settings.service";
 import { extractErrorMessage } from "../../services/api";
 import type { Business } from "../../types";
 import { ProductSetup } from "./ProductSetup";
+import { LocationsCard } from "./LocationsCard";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -108,6 +109,8 @@ export default function Settings() {
           }}
         />
       )}
+
+      {session?.role !== "CASHIER" && <LocationsCard />}
 
       <div className="card">
         <div className="card-header">

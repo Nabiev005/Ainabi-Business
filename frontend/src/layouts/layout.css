@@ -518,3 +518,40 @@
 .low-stock-item:hover {
   background: var(--color-surface-muted);
 }
+
+/* ---------- Dashboard alerts ---------- */
+.alert-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  color: inherit;
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+.alert-row:hover {
+  background: var(--color-surface-muted);
+}
+.alert-row-block {
+  flex-direction: column;
+  align-items: stretch;
+}
+.alert-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 26px;
+  font-size: var(--font-size-xs);
+}
+.alert-icon.warn {
+  color: var(--color-warning-text);
+}
+.alert-icon.danger {
+  color: var(--color-danger-text);
+}
+.alert-icon.info {
+  color: var(--color-info-text);
+}
