@@ -1,16 +1,17 @@
 import { z } from "zod";
+import { ASSIGNABLE_ROLES } from "../config/permissions";
 
 export const inviteEmployeeSchema = z.object({
   name: z.string().min(2, "Атын жазыңыз"),
   email: z.string().email("Email туура эмес"),
   phone: z.string().optional().nullable(),
-  password: z.string().min(6, "Пароль эң аз дегенде 6 белгиден турушу керек"),
-  role: z.enum(["ADMIN", "CASHIER"]),
+  password: z.string().min(8, "Пароль эң аз дегенде 8 белгиден турушу керек"),
+  role: z.enum(ASSIGNABLE_ROLES),
   locationId: z.string().optional().nullable(),
 });
 
 export const updateEmployeeSchema = z.object({
-  role: z.enum(["ADMIN", "CASHIER"]).optional(),
+  role: z.enum(ASSIGNABLE_ROLES).optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   // null = back to the default location.
   locationId: z.string().optional().nullable(),

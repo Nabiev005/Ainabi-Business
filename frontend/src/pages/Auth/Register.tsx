@@ -30,7 +30,7 @@ export default function Register() {
     businessName: z.string().min(2, t("auth.register.businessNameMin")),
     phone: z.string().min(6, t("auth.register.phoneMin")),
     email: z.string().email(t("auth.register.emailInvalid")),
-    password: z.string().min(6, t("auth.register.passwordMin")),
+    password: z.string().min(8, t("auth.register.passwordMin")),
     businessType: z.string(),
   });
   type FormValues = z.infer<typeof schema>;

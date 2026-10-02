@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
-import { requireRole } from "../middleware/requireRole";
+import { requirePermission } from "../middleware/requireRole";
 import {
   addPaymentHandler,
   createDebtHandler,
@@ -16,13 +16,13 @@ import {
 const router = Router();
 
 router.use(requireAuth, businessRateLimit);
-router.get("/", listHandler);
-router.get("/summary", summaryHandler);
-router.get("/:id", getHandler);
-router.post("/", requireRole("OWNER", "ADMIN"), createHandler);
-router.put("/:id", requireRole("OWNER", "ADMIN"), updateHandler);
-router.delete("/:id", requireRole("OWNER", "ADMIN"), deleteHandler);
-router.post("/:id/debts", requireRole("OWNER", "ADMIN"), createDebtHandler);
-router.post("/debts/:debtId/payments", requireRole("OWNER", "ADMIN"), addPaymentHandler);
+router.get("/", requirePermission("suppliers.view"), listHandler);
+router.get("/summary", requirePermission("suppliers.view"), summaryHandler);
+router.get("/:id", requirePermission("suppliers.view"), getHandler);
+router.post("/", requirePermission("suppliers.manage"), createHandler);
+router.put("/:id", requirePermission("suppliers.manage"), updateHandler);
+router.delete("/:id", requirePermission("suppliers.delete"), deleteHandler);
+router.post("/:id/debts", requirePermission("suppliers.finance"), createDebtHandler);
+router.post("/debts/:debtId/payments", requirePermission("suppliers.finance"), addPaymentHandler);
 
 export default router;

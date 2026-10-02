@@ -6,18 +6,18 @@ import { SkeletonRows } from "../../components/ui/Skeleton";
 import { Badge } from "../../components/ui/Badge";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { InviteEmployeeModal } from "./InviteEmployeeModal";
-import { useAuth } from "../../hooks/useAuth";
+import { usePermissions } from "../../hooks/usePermissions";
 import { useToast } from "../../hooks/useToast";
 import { useLabels } from "../../hooks/useLabels";
 import * as employeeService from "../../services/employee.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDateTime } from "../../utils/format";
 import { useLocations } from "../../hooks/useLocations";
-import type { Employee, Role } from "../../types";
+import { ASSIGNABLE_ROLES, type AssignableRole, type Employee } from "../../types";
 
 export default function Employees() {
   const { t } = useTranslation();
-  const { session } = useAuth();
+  const { can } = usePermissions();
   const { showToast } = useToast();
   const labels = useLabels();
   const [employees, setEmployees] = useState<Employee[] | null>(null);
@@ -26,7 +26,7 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const canManage = session?.role === "OWNER" || session?.role === "ADMIN";
+  const canManage = can("employees.manage");
   const { locations, multiple } = useLocations();
 
   async function handleLocationChange(employee: Employee, locationId: string) {
@@ -51,7 +51,7 @@ export default function Employees() {
     load();
   }, [load]);
 
-  async function handleInvite(values: { name: string; email: string; phone: string; password: string; role: Exclude<Role, "OWNER"> }) {
+  async function handleInvite(values: { name: string; email: string; phone: string; password: string; role: AssignableRole }) {
     setSubmitting(true);
     try {
       await employeeService.inviteEmployee({ ...values, phone: values.phone || undefined });
@@ -75,7 +75,7 @@ export default function Employees() {
     }
   }
 
-  async function handleRoleChange(employee: Employee, role: Exclude<Role, "OWNER">) {
+  async function handleRoleChange(employee: Employee, role: AssignableRole) {
     try {
       await employeeService.updateEmployee(employee.id, { role });
       showToast({ variant: "success", title: t("employees.roleChanged") });
@@ -150,10 +150,13 @@ export default function Employees() {
                           className="select"
                           style={{ height: 34, fontSize: "var(--font-size-sm)" }}
                           value={e.role}
-                          onChange={(ev) => handleRoleChange(e, ev.target.value as Exclude<Role, "OWNER">)}
+                          onChange={(ev) => handleRoleChange(e, ev.target.value as AssignableRole)}
                         >
-                          <option value="ADMIN">{labels.role.ADMIN}</option>
-                          <option value="CASHIER">{labels.role.CASHIER}</option>
+                          {ASSIGNABLE_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {labels.role[r]}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         <Badge variant={e.role === "OWNER" ? "info" : "neutral"}>{labels.role[e.role]}</Badge>

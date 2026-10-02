@@ -3,6 +3,7 @@ import { Printer, ShieldCheck, Undo2 } from "lucide-react";
 import { Drawer } from "../../components/ui/Drawer";
 import { Badge } from "../../components/ui/Badge";
 import { useAuth } from "../../hooks/useAuth";
+import { sessionCan } from "../../hooks/usePermissions";
 import { useLabels } from "../../hooks/useLabels";
 import { formatDate, formatDateTime, formatMoney, formatNumber, unitLabel } from "../../utils/format";
 import { printSaleReceipt } from "../../utils/documents";
@@ -20,7 +21,7 @@ export function SaleDrawer({ sale, onClose, onReturn }: SaleDrawerProps) {
   const labels = useLabels();
   if (!sale) return null;
 
-  const canReturn = session?.role !== "CASHIER" && sale.items.some((i) => i.returnedQuantity < i.quantity);
+  const canReturn = sessionCan(session, "sales.return") && sale.items.some((i) => i.returnedQuantity < i.quantity);
   const today = new Date().toISOString().slice(0, 10);
 
   return (

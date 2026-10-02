@@ -1,0 +1,3 @@
+-- New roles: Бухгалтер (ACCOUNTANT) and Регистратор (REGISTRAR).
+ALTER TYPE "EmployeeRole" ADD VALUE IF NOT EXISTS 'ACCOUNTANT';
+ALTER TYPE "EmployeeRole" ADD VALUE IF NOT EXISTS 'REGISTRAR';

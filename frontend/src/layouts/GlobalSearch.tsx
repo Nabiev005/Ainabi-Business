@@ -7,12 +7,16 @@ import * as productService from "../services/product.service";
 import * as customerService from "../services/customer.service";
 import * as saleService from "../services/sale.service";
 import { useAuth } from "../hooks/useAuth";
+import { usePermissions } from "../hooks/usePermissions";
 import { formatDate, formatMoney } from "../utils/format";
 import type { Customer, Product, SerialLookupResult } from "../types";
 
 export function GlobalSearch() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { can } = usePermissions();
+  const canSeeCustomers = can("customers.view");
+  const canSeeSales = can("sales.view");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,8 +56,8 @@ export function GlobalSearch() {
     const lookupSerial = trackSerials && debouncedQuery.trim().length >= 4;
     Promise.all([
       productService.listProducts({ search: debouncedQuery, pageSize: 5 }).then((r) => r.items),
-      customerService.listCustomers(debouncedQuery).then((r) => r.slice(0, 5)),
-      lookupSerial ? saleService.findBySerial(debouncedQuery.trim()).catch(() => []) : Promise.resolve([]),
+      canSeeCustomers ? customerService.listCustomers(debouncedQuery).then((r) => r.slice(0, 5)) : Promise.resolve([]),
+      lookupSerial && canSeeSales ? saleService.findBySerial(debouncedQuery.trim()).catch(() => []) : Promise.resolve([]),
     ])
       .then(([p, c, s]) => {
         setProducts(p);
@@ -61,7 +65,7 @@ export function GlobalSearch() {
         setSerialHits(s);
       })
       .finally(() => setLoading(false));
-  }, [debouncedQuery, trackSerials]);
+  }, [debouncedQuery, trackSerials, canSeeCustomers, canSeeSales]);
 
   const hasResults = products.length > 0 || customers.length > 0 || serialHits.length > 0;
 

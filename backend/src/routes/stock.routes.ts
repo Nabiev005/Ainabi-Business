@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
-import { requireRole } from "../middleware/requireRole";
+import { requirePermission } from "../middleware/requireRole";
 import {
   createHandler,
   createInventoryHandler,
@@ -19,25 +19,24 @@ import {
 } from "../controllers/stock.controller";
 
 const router = Router();
-const manager = requireRole("OWNER", "ADMIN");
 
 router.use(requireAuth, businessRateLimit);
-router.get("/", listHandler);
-router.get("/summary", summaryHandler);
-router.get("/reorder-suggestions", reorderSuggestionsHandler);
-router.post("/", manager, createHandler);
+router.get("/", requirePermission("stock.view"), listHandler);
+router.get("/summary", requirePermission("stock.view"), summaryHandler);
+router.get("/reorder-suggestions", requirePermission("stock.view"), reorderSuggestionsHandler);
+router.post("/", requirePermission("stock.adjust"), createHandler);
 
-router.get("/receipts", listReceiptsHandler);
-router.get("/receipts/:id", getReceiptHandler);
-router.post("/receipts", manager, createReceiptHandler);
+router.get("/receipts", requirePermission("stock.view"), listReceiptsHandler);
+router.get("/receipts/:id", requirePermission("stock.view"), getReceiptHandler);
+router.post("/receipts", requirePermission("stock.receive"), createReceiptHandler);
 
-router.get("/inventory", listInventoryHandler);
-router.get("/inventory/:id", getInventoryHandler);
-router.post("/inventory", manager, createInventoryHandler);
+router.get("/inventory", requirePermission("stock.view"), listInventoryHandler);
+router.get("/inventory/:id", requirePermission("stock.view"), getInventoryHandler);
+router.post("/inventory", requirePermission("stock.inventory"), createInventoryHandler);
 
-router.post("/transfers", manager, createTransferHandler);
+router.post("/transfers", requirePermission("stock.adjust"), createTransferHandler);
 
-router.get("/batches/expiring", expiringBatchesHandler);
-router.post("/batches/:id/write-off", manager, writeOffBatchHandler);
+router.get("/batches/expiring", requirePermission("stock.view"), expiringBatchesHandler);
+router.post("/batches/:id/write-off", requirePermission("stock.adjust"), writeOffBatchHandler);
 
 export default router;

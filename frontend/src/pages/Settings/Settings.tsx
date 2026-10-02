@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Globe, QrCode, Save, User } from "lucide-react";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useAuth } from "../../hooks/useAuth";
+import { sessionCan } from "../../hooks/usePermissions";
 import { useToast } from "../../hooks/useToast";
 import * as settingsService from "../../services/settings.service";
 import { extractErrorMessage } from "../../services/api";
@@ -100,7 +101,7 @@ export default function Settings() {
         </form>
       </div>
 
-      {session?.role !== "CASHIER" && (
+      {sessionCan(session, "settings.products") && (
         <ProductSetup
           business={business}
           onBusinessChange={(updated) => {
@@ -110,7 +111,7 @@ export default function Settings() {
         />
       )}
 
-      {session?.role !== "CASHIER" && <LocationsCard />}
+      {sessionCan(session, "settings.products") && <LocationsCard />}
 
       <div className="card">
         <div className="card-header">

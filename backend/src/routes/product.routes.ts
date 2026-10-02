@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
-import { requireRole } from "../middleware/requireRole";
+import { requirePermission } from "../middleware/requireRole";
 import {
   createHandler,
   createVariantGroupHandler,
@@ -21,18 +21,20 @@ import {
 const router = Router();
 
 router.use(requireAuth, businessRateLimit);
-router.get("/", listHandler);
-router.get("/barcode/:barcode", getByBarcodeHandler);
-router.post("/import", requireRole("OWNER", "ADMIN"), importHandler);
-router.post("/variant-groups", requireRole("OWNER", "ADMIN"), createVariantGroupHandler);
-router.get("/variant-groups/:groupId", getVariantGroupHandler);
-router.get("/:id", getHandler);
-router.get("/:id/analogs", getAnalogsHandler);
-router.put("/:id/analogs", requireRole("OWNER", "ADMIN"), setAnalogsHandler);
-router.get("/:id/serials", listSerialsHandler);
-router.get("/:id/batches", listBatchesHandler);
-router.post("/", requireRole("OWNER", "ADMIN"), createHandler);
-router.put("/:id", requireRole("OWNER", "ADMIN"), updateHandler);
-router.delete("/:id", requireRole("OWNER", "ADMIN"), deleteHandler);
+const view = requirePermission("products.view");
+const manage = requirePermission("products.manage");
+router.get("/", view, listHandler);
+router.get("/barcode/:barcode", view, getByBarcodeHandler);
+router.post("/import", manage, importHandler);
+router.post("/variant-groups", manage, createVariantGroupHandler);
+router.get("/variant-groups/:groupId", view, getVariantGroupHandler);
+router.get("/:id", view, getHandler);
+router.get("/:id/analogs", view, getAnalogsHandler);
+router.put("/:id/analogs", manage, setAnalogsHandler);
+router.get("/:id/serials", view, listSerialsHandler);
+router.get("/:id/batches", view, listBatchesHandler);
+router.post("/", manage, createHandler);
+router.put("/:id", manage, updateHandler);
+router.delete("/:id", manage, deleteHandler);
 
 export default router;

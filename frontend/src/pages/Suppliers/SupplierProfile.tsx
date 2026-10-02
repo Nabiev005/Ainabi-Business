@@ -13,9 +13,11 @@ import * as supplierService from "../../services/supplier.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDateTime, formatMoney, formatNumber } from "../../utils/format";
 import type { PaymentMethod, SupplierDebt, SupplierDetail } from "../../types";
+import { usePermissions } from "../../hooks/usePermissions";
 
 export default function SupplierProfile() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -99,10 +101,12 @@ export default function SupplierProfile() {
             </p>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setAddDebtOpen(true)}>
-          <Plus size={18} />
-          {t("debts.add")}
-        </button>
+        {can("suppliers.finance") && (
+          <button className="btn btn-primary" onClick={() => setAddDebtOpen(true)}>
+            <Plus size={18} />
+            {t("debts.add")}
+          </button>
+        )}
       </div>
 
       <div className="kpi-grid">
@@ -207,7 +211,7 @@ export default function SupplierProfile() {
                     </td>
                     <td className="text-muted">{d.comment ?? "—"}</td>
                     <td>
-                      {d.status !== "PAID" && (
+                      {d.status !== "PAID" && can("suppliers.finance") && (
                         <button className="btn btn-secondary btn-sm" onClick={() => setPayTarget(d)}>
                           {t("suppliers.profile.pay")}
                         </button>

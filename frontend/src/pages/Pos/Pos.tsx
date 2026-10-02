@@ -23,6 +23,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Modal } from "../../components/ui/Modal";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { useAuth } from "../../hooks/useAuth";
+import { sessionCan } from "../../hooks/usePermissions";
 import { useToast } from "../../hooks/useToast";
 import { useLabels } from "../../hooks/useLabels";
 import { useLocations } from "../../hooks/useLocations";
@@ -230,7 +231,7 @@ export default function Pos() {
   const labels = useLabels();
   const business = session?.business;
   const { locations, current: myLocation, multiple } = useLocations();
-  const canPickLocation = multiple && session?.role !== "CASHIER";
+  const canPickLocation = multiple && sessionCan(session, "stock.adjust");
 
   const [locationId, setLocationId] = useState("");
   const [products, setProducts] = useState<Product[] | null>(null);

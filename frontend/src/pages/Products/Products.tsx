@@ -18,6 +18,7 @@ import { extractErrorMessage } from "../../services/api";
 import { formatMoney, formatNumber, unitLabel } from "../../utils/format";
 import type { Category, Product } from "../../types";
 import { useAuth } from "../../hooks/useAuth";
+import { usePermissions } from "../../hooks/usePermissions";
 import { attributeChips } from "../../utils/attributes";
 import "./Products.css";
 
@@ -27,7 +28,10 @@ export default function Products() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const productFields = session?.business.productFields;
-  const canManage = session?.role !== "CASHIER";
+  const { can } = usePermissions();
+  const canManage = can("products.manage");
+  // The cashier never gets cost prices from the API — hide the columns too.
+  const canSeeCosts = can("costs.view");
   const [importOpen, setImportOpen] = useState(false);
   const [variantsOpen, setVariantsOpen] = useState(false);
   const [products, setProducts] = useState<Product[] | null>(null);
@@ -224,9 +228,9 @@ export default function Products() {
                     <th>{t("products.table.product")}</th>
                     <th>{t("products.table.barcode")}</th>
                     <th>{t("products.table.category")}</th>
-                    <th className="table-cell-num">{t("products.table.purchasePrice")}</th>
+                    {canSeeCosts && <th className="table-cell-num">{t("products.table.purchasePrice")}</th>}
                     <th className="table-cell-num">{t("products.table.salePrice")}</th>
-                    <th className="table-cell-num">{t("products.table.profit")}</th>
+                    {canSeeCosts && <th className="table-cell-num">{t("products.table.profit")}</th>}
                     <th className="table-cell-num">{t("products.table.stock")}</th>
                     <th>{t("products.table.status")}</th>
                     <th></th>
@@ -265,9 +269,9 @@ export default function Products() {
                         )}
                       </td>
                       <td>{p.categoryName ?? "—"}</td>
-                      <td className="table-cell-num">{formatMoney(p.purchasePrice)}</td>
+                      {canSeeCosts && <td className="table-cell-num">{formatMoney(p.purchasePrice)}</td>}
                       <td className="table-cell-num">{formatMoney(p.salePrice)}</td>
-                      <td className="table-cell-num">{formatMoney(p.profit)}</td>
+                      {canSeeCosts && <td className="table-cell-num">{formatMoney(p.profit)}</td>}
                       <td className="table-cell-num">
                         {formatNumber(p.quantity)} {unitLabel(p.unit)}
                       </td>
@@ -284,22 +288,28 @@ export default function Products() {
                       </td>
                       <td>
                         <div className="table-actions">
-                          <button className="btn btn-ghost btn-icon btn-sm" title={t("products.labelTooltip")} onClick={() => navigate(`/labels?product=${p.id}`)}>
-                            <Tag size={16} />
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-icon btn-sm"
-                            title={t("products.editTooltip")}
-                            onClick={() => {
-                              setEditing(p);
-                              setDrawerOpen(true);
-                            }}
-                          >
-                            <SquarePen size={16} />
-                          </button>
-                          <button className="btn btn-ghost btn-icon btn-sm" title={t("products.deleteTooltip")} onClick={() => setDeleteTarget(p)}>
-                            <Trash2 size={16} color="var(--color-danger-text)" />
-                          </button>
+                          {can("labels.print") && (
+                            <button className="btn btn-ghost btn-icon btn-sm" title={t("products.labelTooltip")} onClick={() => navigate(`/labels?product=${p.id}`)}>
+                              <Tag size={16} />
+                            </button>
+                          )}
+                          {canManage && (
+                            <>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                title={t("products.editTooltip")}
+                                onClick={() => {
+                                  setEditing(p);
+                                  setDrawerOpen(true);
+                                }}
+                              >
+                                <SquarePen size={16} />
+                              </button>
+                              <button className="btn btn-ghost btn-icon btn-sm" title={t("products.deleteTooltip")} onClick={() => setDeleteTarget(p)}>
+                                <Trash2 size={16} color="var(--color-danger-text)" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

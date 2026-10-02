@@ -5,6 +5,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { ToastStack } from "./components/ui/ToastStack";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RequirePermission } from "./components/RequirePermission";
 import { AppLayout } from "./layouts/AppLayout";
 
 const Landing = lazy(() => import("./pages/Landing/Landing"));
@@ -60,24 +61,24 @@ export default function App() {
 
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/pos" element={<Pos />} />
-                  <Route path="/sales" element={<Sales />} />
-                  <Route path="/shifts" element={<Shifts />} />
-                  <Route path="/repairs" element={<Repairs />} />
-                  <Route path="/receiving" element={<Receiving />} />
-                  <Route path="/inventory" element={<Inventory />} />
-                  <Route path="/labels" element={<Labels />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/stock" element={<Stock />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/customers/:id" element={<CustomerProfile />} />
-                  <Route path="/debts" element={<Debts />} />
-                  <Route path="/suppliers" element={<Suppliers />} />
-                  <Route path="/suppliers/:id" element={<SupplierProfile />} />
-                  <Route path="/expenses" element={<Expenses />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/employees" element={<Employees />} />
+                  <Route path="/dashboard" element={<RequirePermission permission="reports.view"><Dashboard /></RequirePermission>} />
+                  <Route path="/pos" element={<RequirePermission permission="pos.sell"><Pos /></RequirePermission>} />
+                  <Route path="/sales" element={<RequirePermission permission="sales.view"><Sales /></RequirePermission>} />
+                  <Route path="/shifts" element={<RequirePermission permission={["shifts.use", "shifts.viewAll"]}><Shifts /></RequirePermission>} />
+                  <Route path="/repairs" element={<RequirePermission permission="repairs.manage"><Repairs /></RequirePermission>} />
+                  <Route path="/receiving" element={<RequirePermission permission="stock.receive"><Receiving /></RequirePermission>} />
+                  <Route path="/inventory" element={<RequirePermission permission="stock.inventory"><Inventory /></RequirePermission>} />
+                  <Route path="/labels" element={<RequirePermission permission="labels.print"><Labels /></RequirePermission>} />
+                  <Route path="/products" element={<RequirePermission permission="products.view"><Products /></RequirePermission>} />
+                  <Route path="/stock" element={<RequirePermission permission="stock.view"><Stock /></RequirePermission>} />
+                  <Route path="/customers" element={<RequirePermission permission="customers.view"><Customers /></RequirePermission>} />
+                  <Route path="/customers/:id" element={<RequirePermission permission="customers.view"><CustomerProfile /></RequirePermission>} />
+                  <Route path="/debts" element={<RequirePermission permission="debts.view"><Debts /></RequirePermission>} />
+                  <Route path="/suppliers" element={<RequirePermission permission="suppliers.view"><Suppliers /></RequirePermission>} />
+                  <Route path="/suppliers/:id" element={<RequirePermission permission="suppliers.view"><SupplierProfile /></RequirePermission>} />
+                  <Route path="/expenses" element={<RequirePermission permission="expenses.view"><Expenses /></RequirePermission>} />
+                  <Route path="/reports" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
+                  <Route path="/employees" element={<RequirePermission permission="employees.manage"><Employees /></RequirePermission>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/support" element={<Support />} />
                 </Route>

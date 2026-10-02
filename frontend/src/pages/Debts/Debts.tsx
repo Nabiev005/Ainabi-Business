@@ -14,9 +14,11 @@ import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatMoney } from "../../utils/format";
 import type { Customer, Debt, PaymentMethod } from "../../types";
 import "./Debts.css";
+import { usePermissions } from "../../hooks/usePermissions";
 
 export default function Debts() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const { showToast } = useToast();
   const labels = useLabels();
   const [debts, setDebts] = useState<Debt[] | null>(null);
@@ -81,10 +83,12 @@ export default function Debts() {
           <h1 className="page-title">{t("debts.title")}</h1>
           <p className="page-subtitle">{t("debts.subtitle")}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
-          <Plus size={18} />
-          {t("debts.add")}
-        </button>
+        {can("debts.create") && (
+          <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
+            <Plus size={18} />
+            {t("debts.add")}
+          </button>
+        )}
       </div>
 
       <div
@@ -163,7 +167,7 @@ export default function Debts() {
                     </td>
                     <td className="text-muted">{formatDate(d.createdAt)}</td>
                     <td>
-                      {d.status !== "PAID" && (
+                      {d.status !== "PAID" && can("debts.collect") && (
                         <button className="btn btn-secondary btn-sm" onClick={() => setPayTarget(d)}>
                           {t("debts.acceptPayment")}
                         </button>
