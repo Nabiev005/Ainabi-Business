@@ -1,0 +1,212 @@
+/* Kanban board — columns scroll sideways inside the board, never the page. */
+.pipeline-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 300px);
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  align-items: start;
+}
+
+.pipeline-column {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  max-height: calc(100vh - 230px);
+  min-height: 200px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pipeline-column-drop {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
+
+.pipeline-column-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 4px solid transparent;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pipeline-column-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pipeline-column-name {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-column-count {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+}
+
+.pipeline-column-block {
+  color: var(--color-danger-text);
+  display: inline-flex;
+}
+
+.pipeline-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+.pipeline-column-empty,
+.pipeline-column-more {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  padding: var(--space-4) var(--space-2);
+}
+
+.pipeline-column-empty {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.pipeline-card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pipeline-card[draggable="true"] {
+  cursor: grab;
+}
+
+.pipeline-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.pipeline-card-dragging {
+  opacity: 0.4;
+}
+
+.pipeline-card-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pipeline-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pipeline-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pipeline-card-name {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.pipeline-card-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.pipeline-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: var(--font-size-sm);
+}
+
+.pipeline-history li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Stage editor rows */
+.stage-row {
+  display: grid;
+  grid-template-columns: auto 40px 1fr auto auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.stage-row-order {
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-row-color {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.stage-row-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .stage-row {
+    grid-template-columns: auto 40px 1fr auto;
+  }
+
+  .stage-row-block {
+    grid-column: 2 / -1;
+  }
+}

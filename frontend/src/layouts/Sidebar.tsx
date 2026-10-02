@@ -20,6 +20,9 @@ import {
   ClipboardCheck,
   Wrench,
   Coins,
+  ChartPie,
+  ListTodo,
+  SquareKanban,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { sessionCan } from "../hooks/usePermissions";
@@ -30,11 +33,14 @@ const can = (s: Session, ...permissions: Permission[]) => permissions.some((p) =
 // Each role only sees the screens it can actually use (see backend config/permissions.ts).
 const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show: (s: Session) => boolean }> = [
   { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, end: true, show: (s) => can(s, "reports.view") },
+  { to: "/analytics", key: "analytics", icon: ChartPie, show: (s) => can(s, "analytics.view") },
+  { to: "/tasks", key: "tasks", icon: ListTodo, show: () => true },
   { to: "/pos", key: "pos", icon: ShoppingCart, show: (s) => can(s, "pos.sell") },
   { to: "/sales", key: "sales", icon: ScrollText, show: (s) => can(s, "sales.view") },
   { to: "/shifts", key: "shifts", icon: Coins, show: (s) => can(s, "shifts.use", "shifts.viewAll") },
   { to: "/repairs", key: "repairs", icon: Wrench, show: (s) => !!s.business.enableRepairs && can(s, "repairs.manage") },
   { to: "/products", key: "products", icon: Package, show: (s) => can(s, "products.view") },
+  { to: "/pipeline", key: "pipeline", icon: SquareKanban, show: (s) => can(s, "pipeline.view") },
   { to: "/stock", key: "stock", icon: Warehouse, show: (s) => can(s, "stock.view") },
   { to: "/receiving", key: "receiving", icon: PackagePlus, show: (s) => can(s, "stock.receive") },
   { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: (s) => can(s, "stock.inventory") },

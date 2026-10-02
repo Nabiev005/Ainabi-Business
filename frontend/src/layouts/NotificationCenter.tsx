@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Bell, PackageX, Wallet } from "lucide-react";
+import { AlertTriangle, Bell, ClipboardList, PackageX, Wallet } from "lucide-react";
 import * as dashboardService from "../services/dashboard.service";
 import * as debtService from "../services/debt.service";
 import * as supplierService from "../services/supplier.service";
+import * as taskService from "../services/task.service";
+import type { Task } from "../services/task.service";
+import { useToast } from "../hooks/useToast";
 import { formatMoney } from "../utils/format";
 import type { LowStockProduct } from "../types";
 
@@ -14,7 +17,7 @@ interface NotificationItem {
   title: string;
   subtitle: string;
   to: string;
-  variant: "warning" | "danger";
+  variant: "warning" | "danger" | "info";
 }
 
 export function NotificationCenter() {
@@ -25,6 +28,11 @@ export function NotificationCenter() {
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
   const [customerDebtTotal, setCustomerDebtTotal] = useState(0);
   const [supplierDebtTotal, setSupplierDebtTotal] = useState(0);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [unseenTasks, setUnseenTasks] = useState(0);
+  // Last unseen count we knew about — a rise means a task just arrived.
+  const knownUnseen = useRef<number | null>(null);
+  const { showToast } = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,11 +49,19 @@ export function NotificationCenter() {
       dashboardService.getLowStock(),
       debtService.getDebtSummary().catch(() => ({ totalOutstanding: 0, openDebts: 0 })),
       supplierService.getSupplierSummary().catch(() => ({ totalOutstanding: 0, openDebts: 0 })),
+      taskService.getTaskNotifications().catch(() => ({ unseen: 0, tasks: [] as Task[] })),
     ])
-      .then(([stock, customerDebts, supplierDebts]) => {
+      .then(([stock, customerDebts, supplierDebts, myTasks]) => {
         setLowStock(stock);
         setCustomerDebtTotal(customerDebts.totalOutstanding);
         setSupplierDebtTotal(supplierDebts.totalOutstanding);
+        setTasks(myTasks.tasks);
+        setUnseenTasks(myTasks.unseen);
+        if (knownUnseen.current !== null && myTasks.unseen > knownUnseen.current) {
+          const newest = myTasks.tasks.find((task) => !task.seen);
+          showToast({ variant: "info", title: t("header.taskArrived"), message: newest?.title });
+        }
+        knownUnseen.current = myTasks.unseen;
       })
       .finally(() => setLoading(false));
   }
@@ -58,6 +74,16 @@ export function NotificationCenter() {
   }, []);
 
   const items: NotificationItem[] = [];
+  if (tasks.length > 0) {
+    items.push({
+      id: "tasks",
+      icon: ClipboardList,
+      title: unseenTasks > 0 ? t("header.newTasks", { count: unseenTasks }) : t("header.openTasks", { count: tasks.length }),
+      subtitle: tasks.slice(0, 3).map((task) => task.title).join(", "),
+      to: "/tasks",
+      variant: unseenTasks > 0 ? "danger" : "info",
+    });
+  }
   const outOfStock = lowStock.filter((p) => p.status === "OUT");
   const lowOnly = lowStock.filter((p) => p.status === "LOW");
 
@@ -102,11 +128,26 @@ export function NotificationCenter() {
     });
   }
 
+  // Opening the bell counts as having seen the new tasks; they keep their
+  // "new" wording while the panel is open and the badge clears on close.
+  useEffect(() => {
+    if (open && unseenTasks > 0) {
+      taskService.markTasksSeen().catch(() => undefined);
+      knownUnseen.current = 0;
+    }
+    if (!open) setUnseenTasks((n) => (knownUnseen.current === 0 ? 0 : n));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   return (
     <div style={{ position: "relative" }} ref={rootRef}>
       <button className="header-icon-btn" aria-label={t("header.notifications")} onClick={() => setOpen((v) => !v)}>
         <Bell size={17} />
-        {items.length > 0 && <span className="header-icon-dot pulse-danger" />}
+        {unseenTasks > 0 ? (
+          <span className="header-icon-count">{unseenTasks > 9 ? "9+" : unseenTasks}</span>
+        ) : (
+          items.length > 0 && <span className="header-icon-dot pulse-danger" />
+        )}
       </button>
 
       {open && (

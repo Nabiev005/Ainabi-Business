@@ -34,6 +34,9 @@ const Inventory = lazy(() => import("./pages/Inventory/Inventory"));
 const Labels = lazy(() => import("./pages/Labels/Labels"));
 const Repairs = lazy(() => import("./pages/Repairs/Repairs"));
 const Shifts = lazy(() => import("./pages/Shifts/Shifts"));
+const Tasks = lazy(() => import("./pages/Tasks/Tasks"));
+const Pipeline = lazy(() => import("./pages/Pipeline/Pipeline"));
+const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
 function PageFallback() {
@@ -62,6 +65,9 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<RequirePermission permission="reports.view"><Dashboard /></RequirePermission>} />
+                  <Route path="/analytics" element={<RequirePermission permission="analytics.view"><Analytics /></RequirePermission>} />
+                  <Route path="/tasks" element={<Tasks />} />
+                  <Route path="/pipeline" element={<RequirePermission permission="pipeline.view"><Pipeline /></RequirePermission>} />
                   <Route path="/pos" element={<RequirePermission permission="pos.sell"><Pos /></RequirePermission>} />
                   <Route path="/sales" element={<RequirePermission permission="sales.view"><Sales /></RequirePermission>} />
                   <Route path="/shifts" element={<RequirePermission permission={["shifts.use", "shifts.viewAll"]}><Shifts /></RequirePermission>} />

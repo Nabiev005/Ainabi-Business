@@ -18,7 +18,7 @@ function addMonths(date: Date, months: number) {
 export async function createSale(businessId: string, employeeId: string, input: CreateSaleInput) {
   const productIds = [...new Set(input.items.map((i) => i.productId))];
   const [products, business] = await Promise.all([
-    prisma.product.findMany({ where: { id: { in: productIds }, businessId }, include: { packages: true } }),
+    prisma.product.findMany({ where: { id: { in: productIds }, businessId }, include: { packages: true, stage: true } }),
     prisma.business.findUniqueOrThrow({ where: { id: businessId } }),
   ]);
 
@@ -26,6 +26,12 @@ export async function createSale(businessId: string, employeeId: string, input: 
     throw ApiError.badRequest("Тандалган товарлардын айрымдары табылган жок.");
   }
   const productMap = new Map(products.map((p) => [p.id, p]));
+
+  // Product pipeline: goods still in a "not for sale" stage (e.g. being checked) stay off the till.
+  const blocked = products.find((p) => p.stage?.blocksSale);
+  if (blocked) {
+    throw ApiError.badRequest(`"${blocked.name}" азырынча "${blocked.stage!.name}" этабында — сатууга болбойт.`);
+  }
 
   if (input.customerId) {
     const customer = await prisma.customer.findFirst({ where: { id: input.customerId, businessId } });

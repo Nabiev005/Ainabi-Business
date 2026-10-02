@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
 import { generateBarcodeFromSku } from "../utils/barcode";
 import { changeStock, Db, resolveLocationId } from "../utils/stockLedger";
+import { firstStageId } from "./pipeline.service";
 import {
   ImportInput,
   productSchema,
@@ -175,6 +176,7 @@ function productInclude(locationId?: string) {
   return {
     category: true,
     variantGroup: { select: { id: true, name: true } },
+    stage: { select: { id: true, name: true, color: true, blocksSale: true } },
     packages: { orderBy: { factor: "asc" as const } },
     ...(locationId ? { stocks: { where: { locationId } } } : {}),
   } satisfies Prisma.ProductInclude;
@@ -212,6 +214,7 @@ export function serializeProduct(product: ProductWithRelations) {
     variantGroupId: product.variantGroupId,
     variantGroupName: product.variantGroup?.name ?? null,
     variantLabel: product.variantLabel,
+    stage: product.stage,
     packages: product.packages.map((p) => ({
       id: p.id,
       name: p.name,
@@ -394,10 +397,13 @@ export async function createProduct(businessId: string, input: ProductInput, emp
     if (input.barcode) await assertBarcodeFree(tx, businessId, input.barcode);
     const sku = input.sku || (await generateSku(tx, businessId));
     const barcode = input.barcode || (await ensureUniqueBarcode(tx, businessId, sku));
+    const stageId = await firstStageId(tx, businessId);
 
     const product = await tx.product.create({
       data: {
         businessId,
+        stageId,
+        stageChangedAt: stageId ? new Date() : null,
         name: input.name,
         categoryId: input.categoryId || null,
         sku,
@@ -512,9 +518,12 @@ export async function createVariantGroup(businessId: string, input: VariantGroup
         const barcode = variant.barcode || (await ensureUniqueBarcode(tx, businessId, sku));
         const purchasePrice = variant.purchasePrice ?? input.purchasePrice;
 
+        const stageId = await firstStageId(tx, businessId);
         const product = await tx.product.create({
           data: {
             businessId,
+            stageId,
+            stageChangedAt: stageId ? new Date() : null,
             name: `${group.name} (${label})`,
             categoryId: input.categoryId || null,
             sku,

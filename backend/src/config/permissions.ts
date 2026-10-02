@@ -67,6 +67,18 @@ export const PERMISSIONS = {
 
   "employees.manage": ["OWNER"],
 
+  // Assign tasks to anyone and see everyone's tasks. Every role can see and
+  // update the tasks assigned to itself without any permission.
+  "tasks.manage": MANAGEMENT,
+  // Team performance + full profit/loss statement.
+  "analytics.view": MANAGEMENT,
+
+  // Product pipeline (CRM-style board of stages).
+  "pipeline.view": ["OWNER", "ADMIN", "ACCOUNTANT", "REGISTRAR"],
+  "pipeline.move": ["OWNER", "ADMIN", "REGISTRAR"],
+  // Add / rename / reorder / delete the stages themselves.
+  "pipeline.configure": MANAGEMENT,
+
   "settings.business": ["OWNER"],
   "settings.products": MANAGEMENT,
 } as const satisfies Record<string, readonly Role[]>;

@@ -316,6 +316,10 @@
   background: var(--color-danger-bg);
   color: var(--color-danger-text);
 }
+.notification-item-icon-info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
 
 .header-actions {
   display: flex;
@@ -347,6 +351,23 @@
   height: 8px;
   border-radius: 50%;
   background: var(--color-danger-text);
+  border: 2px solid var(--color-surface);
+}
+/* Unread task count on the bell. */
+.header-icon-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger-text);
+  color: var(--color-text-inverse);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
   border: 2px solid var(--color-surface);
 }
 .header-profile {

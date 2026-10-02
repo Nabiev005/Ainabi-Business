@@ -14,6 +14,9 @@ import settingsRoutes from "./settings.routes";
 import supplierRoutes from "./supplier.routes";
 import repairRoutes from "./repair.routes";
 import shiftRoutes from "./shift.routes";
+import taskRoutes from "./task.routes";
+import pipelineRoutes from "./pipeline.routes";
+import analyticsRoutes from "./analytics.routes";
 
 const router = Router();
 
@@ -32,5 +35,8 @@ router.use("/settings", settingsRoutes);
 router.use("/suppliers", supplierRoutes);
 router.use("/repairs", repairRoutes);
 router.use("/shifts", shiftRoutes);
+router.use("/tasks", taskRoutes);
+router.use("/pipeline", pipelineRoutes);
+router.use("/analytics", analyticsRoutes);
 
 export default router;

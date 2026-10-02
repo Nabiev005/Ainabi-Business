@@ -246,6 +246,12 @@ export default function Products() {
                           </div>
                           <div className="product-name-cell">
                             <div className="product-name">{p.name}</div>
+                            {p.stage && (
+                              <span className="product-stage-chip" style={{ borderColor: p.stage.color }} title={p.stage.blocksSale ? t("pipeline.blocksSaleHint") : undefined}>
+                                <i style={{ background: p.stage.color }} />
+                                {p.stage.name}
+                              </span>
+                            )}
                             {p.sku && <div className="product-sku">{p.sku}</div>}
                             {attributeChips(p, productFields).length > 0 && (
                               <div className="product-attr-chips">
