@@ -13,6 +13,7 @@ import * as customerService from "../../services/customer.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatMoney } from "../../utils/format";
 import type { Customer } from "../../types";
+import { usePermissions } from "../../hooks/usePermissions";
 
 const INACTIVE_DAYS = 30;
 
@@ -24,6 +25,7 @@ function isInactive(c: Customer): boolean {
 
 export default function Customers() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[] | null>(null);
@@ -97,16 +99,18 @@ export default function Customers() {
           <h1 className="page-title">{t("customers.title")}</h1>
           <p className="page-subtitle">{t("customers.subtitle")}</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setDrawerOpen(true);
-          }}
-        >
-          <Plus size={18} />
-          {t("customers.add")}
-        </button>
+        {can("customers.manage") && (
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setEditing(null);
+              setDrawerOpen(true);
+            }}
+          >
+            <Plus size={18} />
+            {t("customers.add")}
+          </button>
+        )}
       </div>
 
       {inactiveCount > 0 && (
@@ -150,7 +154,7 @@ export default function Customers() {
             title={showInactiveOnly ? t("customers.emptyInactive") : t("customers.emptyNone")}
             subtitle={showInactiveOnly ? t("customers.emptyInactiveSubtitle") : t("customers.emptyNoneSubtitle")}
             action={
-              !showInactiveOnly && (
+              !showInactiveOnly && can("customers.manage") && (
                 <button className="btn btn-primary" style={{ marginTop: "var(--space-2)" }} onClick={() => setDrawerOpen(true)}>
                   <Plus size={16} /> {t("customers.add")}
                 </button>
@@ -202,18 +206,22 @@ export default function Customers() {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="table-actions">
-                        <button
-                          className="btn btn-ghost btn-icon btn-sm"
-                          onClick={() => {
-                            setEditing(c);
-                            setDrawerOpen(true);
-                          }}
-                        >
-                          <SquarePen size={16} />
-                        </button>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setDeleteTarget(c)}>
-                          <Trash2 size={16} color="var(--color-danger-text)" />
-                        </button>
+                        {can("customers.manage") && (
+                          <button
+                            className="btn btn-ghost btn-icon btn-sm"
+                            onClick={() => {
+                              setEditing(c);
+                              setDrawerOpen(true);
+                            }}
+                          >
+                            <SquarePen size={16} />
+                          </button>
+                        )}
+                        {can("customers.delete") && (
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setDeleteTarget(c)}>
+                            <Trash2 size={16} color="var(--color-danger-text)" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

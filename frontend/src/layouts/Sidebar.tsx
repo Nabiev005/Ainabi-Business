@@ -22,26 +22,28 @@ import {
   Coins,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import type { Session } from "../types";
+import { sessionCan } from "../hooks/usePermissions";
+import type { Permission, Session } from "../types";
 
-const isManager = (s: Session) => s.role !== "CASHIER";
+const can = (s: Session, ...permissions: Permission[]) => permissions.some((p) => sessionCan(s, p));
 
-const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show?: (s: Session) => boolean }> = [
-  { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, end: true },
-  { to: "/pos", key: "pos", icon: ShoppingCart },
-  { to: "/sales", key: "sales", icon: ScrollText },
-  { to: "/shifts", key: "shifts", icon: Coins },
-  { to: "/repairs", key: "repairs", icon: Wrench, show: (s) => !!s.business.enableRepairs },
-  { to: "/products", key: "products", icon: Package },
-  { to: "/stock", key: "stock", icon: Warehouse },
-  { to: "/receiving", key: "receiving", icon: PackagePlus, show: isManager },
-  { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: isManager },
-  { to: "/customers", key: "customers", icon: Users },
-  { to: "/debts", key: "debts", icon: Wallet },
-  { to: "/suppliers", key: "suppliers", icon: Truck },
-  { to: "/expenses", key: "expenses", icon: Receipt },
-  { to: "/reports", key: "reports", icon: BarChart3 },
-  { to: "/employees", key: "employees", icon: UserCog },
+// Each role only sees the screens it can actually use (see backend config/permissions.ts).
+const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show: (s: Session) => boolean }> = [
+  { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, end: true, show: (s) => can(s, "reports.view") },
+  { to: "/pos", key: "pos", icon: ShoppingCart, show: (s) => can(s, "pos.sell") },
+  { to: "/sales", key: "sales", icon: ScrollText, show: (s) => can(s, "sales.view") },
+  { to: "/shifts", key: "shifts", icon: Coins, show: (s) => can(s, "shifts.use", "shifts.viewAll") },
+  { to: "/repairs", key: "repairs", icon: Wrench, show: (s) => !!s.business.enableRepairs && can(s, "repairs.manage") },
+  { to: "/products", key: "products", icon: Package, show: (s) => can(s, "products.view") },
+  { to: "/stock", key: "stock", icon: Warehouse, show: (s) => can(s, "stock.view") },
+  { to: "/receiving", key: "receiving", icon: PackagePlus, show: (s) => can(s, "stock.receive") },
+  { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: (s) => can(s, "stock.inventory") },
+  { to: "/customers", key: "customers", icon: Users, show: (s) => can(s, "customers.view") },
+  { to: "/debts", key: "debts", icon: Wallet, show: (s) => can(s, "debts.view") },
+  { to: "/suppliers", key: "suppliers", icon: Truck, show: (s) => can(s, "suppliers.view") },
+  { to: "/expenses", key: "expenses", icon: Receipt, show: (s) => can(s, "expenses.view") },
+  { to: "/reports", key: "reports", icon: BarChart3, show: (s) => can(s, "reports.view") },
+  { to: "/employees", key: "employees", icon: UserCog, show: (s) => can(s, "employees.manage") },
 ];
 
 interface SidebarProps {
@@ -54,7 +56,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile }: SidebarProps) {
   const { t } = useTranslation();
   const { session } = useAuth();
-  const items = NAV_ITEMS.filter((item) => !item.show || (session && item.show(session)));
+  const items = session ? NAV_ITEMS.filter((item) => item.show(session)) : [];
 
   return (
     <>

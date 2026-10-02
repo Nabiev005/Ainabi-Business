@@ -129,10 +129,15 @@ model Business {
   @@map("businesses")
 }
 
+// UI names: OWNER = Ээси, ADMIN = Менеджер, ACCOUNTANT = Бухгалтер,
+// CASHIER = Сатуучу, REGISTRAR = Регистратор. Access rules live in
+// src/config/permissions.ts.
 enum EmployeeRole {
   OWNER
   ADMIN
+  ACCOUNTANT
   CASHIER
+  REGISTRAR
 }
 
 enum EmployeeStatus {

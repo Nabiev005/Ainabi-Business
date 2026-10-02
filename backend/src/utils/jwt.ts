@@ -1,12 +1,13 @@
 import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
+import type { Role } from "../config/permissions";
 import { env } from "../config/env";
 
 export interface AccessTokenPayload {
   userId: string;
   businessId: string;
   employeeId: string;
-  role: "OWNER" | "ADMIN" | "CASHIER";
+  role: Role;
 }
 
 export interface RefreshTokenPayload {

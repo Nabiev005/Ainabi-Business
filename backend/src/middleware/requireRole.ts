@@ -1,18 +1,18 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../utils/ApiError";
-
-type Role = "OWNER" | "ADMIN" | "CASHIER";
+import { hasPermission, Permission } from "../config/permissions";
 
 /**
- * Restricts a route to the given roles. Must run after `requireAuth`.
- * Usage: router.post("/", requireAuth, requireRole("OWNER", "ADMIN"), controller)
+ * Restricts a route to roles holding the permission (see config/permissions.ts).
+ * Must run after `requireAuth`.
+ * Usage: router.post("/", requirePermission("products.manage"), controller)
  */
-export function requireRole(...roles: Role[]) {
+export function requirePermission(permission: Permission) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) {
       throw ApiError.unauthorized();
     }
-    if (!roles.includes(req.auth.role)) {
+    if (!hasPermission(req.auth.role, permission)) {
       throw ApiError.forbidden();
     }
     next();

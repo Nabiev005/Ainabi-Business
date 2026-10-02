@@ -10,25 +10,35 @@ import {
   variantGroupSchema,
 } from "../validators/product.validator";
 import * as productService from "../services/product.service";
+import { hasPermission } from "../config/permissions";
 
 const locationQuery = z.object({ locationId: z.string().optional() });
+
+/** Roles without "costs.view" (the cashier) never receive the purchase
+ * price or anything derived from it. */
+function forViewer<T extends { purchasePrice?: unknown; profit?: unknown; marginPercent?: unknown }>(req: Request, product: T) {
+  if (hasPermission(req.auth!.role, "costs.view")) return product;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { purchasePrice, profit, marginPercent, ...rest } = product;
+  return rest;
+}
 
 export const listHandler = asyncHandler(async (req: Request, res: Response) => {
   const query = productQuerySchema.parse(req.query);
   const result = await productService.listProducts(req.auth!.businessId, query);
-  res.json(result);
+  res.json({ ...result, items: result.items.map((p) => forViewer(req, p)) });
 });
 
 export const getHandler = asyncHandler(async (req: Request, res: Response) => {
   const { locationId } = locationQuery.parse(req.query);
   const product = await productService.getProduct(req.auth!.businessId, req.params.id, locationId);
-  res.json(product);
+  res.json(forViewer(req, product));
 });
 
 export const getByBarcodeHandler = asyncHandler(async (req: Request, res: Response) => {
   const { locationId } = locationQuery.parse(req.query);
   const product = await productService.findByBarcode(req.auth!.businessId, req.params.barcode, locationId);
-  res.json(product);
+  res.json(forViewer(req, product));
 });
 
 export const createHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -55,12 +65,14 @@ export const createVariantGroupHandler = asyncHandler(async (req: Request, res: 
 });
 
 export const getVariantGroupHandler = asyncHandler(async (req: Request, res: Response) => {
-  res.json(await productService.getVariantGroup(req.auth!.businessId, req.params.groupId));
+  const group = await productService.getVariantGroup(req.auth!.businessId, req.params.groupId);
+  res.json({ ...group, variants: group.variants.map((p) => forViewer(req, p)) });
 });
 
 export const getAnalogsHandler = asyncHandler(async (req: Request, res: Response) => {
   const { locationId } = locationQuery.parse(req.query);
-  res.json(await productService.getAnalogs(req.auth!.businessId, req.params.id, locationId));
+  const analogs = await productService.getAnalogs(req.auth!.businessId, req.params.id, locationId);
+  res.json(analogs.map((p) => forViewer(req, p)));
 });
 
 export const setAnalogsHandler = asyncHandler(async (req: Request, res: Response) => {

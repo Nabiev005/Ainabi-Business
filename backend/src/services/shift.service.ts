@@ -2,6 +2,7 @@ import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { round2, toNumber } from "../utils/money";
 import { findOpenShift, resolveLocationId } from "../utils/stockLedger";
+import { hasPermission, Role } from "../config/permissions";
 
 /**
  * Everything that moved cash in or out of the drawer during a shift. The
@@ -97,12 +98,12 @@ export async function openShift(businessId: string, employeeId: string, openingC
   return serializeShift(shift.id);
 }
 
-export async function closeShift(businessId: string, employeeId: string, role: string, shiftId: string, countedCash: number, note?: string | null) {
+export async function closeShift(businessId: string, employeeId: string, role: Role, shiftId: string, countedCash: number, note?: string | null) {
   const shift = await prisma.cashShift.findFirst({ where: { id: shiftId, businessId } });
   if (!shift) throw ApiError.notFound("Смена табылган жок.");
   if (shift.status === "CLOSED") throw ApiError.badRequest("Смена мурунтан жабылган.");
-  // A cashier closes their own shift; a manager may close anyone's.
-  if (shift.employeeId !== employeeId && role === "CASHIER") throw ApiError.forbidden();
+  // Everyone closes their own shift; shifts.viewAll roles may close anyone's.
+  if (shift.employeeId !== employeeId && !hasPermission(role, "shifts.viewAll")) throw ApiError.forbidden();
 
   const { expectedCash } = await shiftTotals(shiftId);
   await prisma.cashShift.update({
@@ -130,9 +131,9 @@ export async function addCashMovement(
   return serializeShift(shift.id);
 }
 
-export async function listShifts(businessId: string, employeeId: string, role: string, page: number, pageSize: number) {
-  // Cashiers only see their own shifts.
-  const where = { businessId, ...(role === "CASHIER" ? { employeeId } : {}) };
+export async function listShifts(businessId: string, employeeId: string, role: Role, page: number, pageSize: number) {
+  // Without shifts.viewAll you only see your own shifts.
+  const where = { businessId, ...(hasPermission(role, "shifts.viewAll") ? {} : { employeeId }) };
   const [rows, total] = await Promise.all([
     prisma.cashShift.findMany({
       where,
@@ -162,9 +163,9 @@ export async function listShifts(businessId: string, employeeId: string, role: s
   };
 }
 
-export async function getShift(businessId: string, employeeId: string, role: string, id: string) {
+export async function getShift(businessId: string, employeeId: string, role: Role, id: string) {
   const shift = await prisma.cashShift.findFirst({ where: { id, businessId } });
   if (!shift) throw ApiError.notFound("Смена табылган жок.");
-  if (role === "CASHIER" && shift.employeeId !== employeeId) throw ApiError.forbidden();
+  if (shift.employeeId !== employeeId && !hasPermission(role, "shifts.viewAll")) throw ApiError.forbidden();
   return serializeShift(id);
 }

@@ -1,4 +1,41 @@
-export type Role = "OWNER" | "ADMIN" | "CASHIER";
+/** OWNER = Админ (ээси), ADMIN = Менеджер, ACCOUNTANT = Бухгалтер, CASHIER = Сатуучу, REGISTRAR = Регистратор. */
+export type Role = "OWNER" | "ADMIN" | "ACCOUNTANT" | "CASHIER" | "REGISTRAR";
+/** Roles the owner can give an employee. */
+export const ASSIGNABLE_ROLES = ["ADMIN", "ACCOUNTANT", "CASHIER", "REGISTRAR"] as const;
+export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+/** Mirrors backend/src/config/permissions.ts — the server sends each
+ * session's list, so the frontend never decides access on its own. */
+export type Permission =
+  | "reports.view"
+  | "costs.view"
+  | "pos.sell"
+  | "sales.view"
+  | "sales.return"
+  | "shifts.use"
+  | "shifts.viewAll"
+  | "repairs.manage"
+  | "products.view"
+  | "products.manage"
+  | "stock.view"
+  | "stock.adjust"
+  | "stock.receive"
+  | "stock.inventory"
+  | "labels.print"
+  | "customers.view"
+  | "customers.manage"
+  | "customers.delete"
+  | "debts.view"
+  | "debts.create"
+  | "debts.collect"
+  | "suppliers.view"
+  | "suppliers.manage"
+  | "suppliers.delete"
+  | "suppliers.finance"
+  | "expenses.view"
+  | "expenses.manage"
+  | "employees.manage"
+  | "settings.business"
+  | "settings.products";
 export type EmployeeStatus = "ACTIVE" | "INACTIVE";
 export type PaymentMethod = "CASH" | "CARD" | "QR" | "DEBT";
 export type ProductUnit = "PIECE" | "KG" | "GRAM" | "LITER" | "METER" | "PACK" | "BOX";
@@ -81,6 +118,7 @@ export interface Session {
   user: User;
   business: Business;
   role: Role;
+  permissions: Permission[];
   employeeId: string;
   /** The employee's own branch (null = the default one). */
   locationId?: string | null;

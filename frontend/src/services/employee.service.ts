@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { Employee, EmployeeStatus, Role } from "../types";
+import type { AssignableRole, Employee, EmployeeStatus } from "../types";
 
 export async function listEmployees(): Promise<Employee[]> {
   const { data } = await api.get<Employee[]>("/employees");
@@ -11,7 +11,7 @@ export async function inviteEmployee(payload: {
   email: string;
   phone?: string | null;
   password: string;
-  role: Exclude<Role, "OWNER">;
+  role: AssignableRole;
   locationId?: string | null;
 }): Promise<Employee> {
   const { data } = await api.post<Employee>("/employees", payload);
@@ -20,7 +20,7 @@ export async function inviteEmployee(payload: {
 
 export async function updateEmployee(
   id: string,
-  payload: { role?: Exclude<Role, "OWNER">; status?: EmployeeStatus; locationId?: string | null },
+  payload: { role?: AssignableRole; status?: EmployeeStatus; locationId?: string | null },
 ): Promise<Employee> {
   const { data } = await api.put<Employee>(`/employees/${id}`, payload);
   return data;

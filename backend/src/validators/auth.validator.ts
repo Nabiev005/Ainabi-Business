@@ -6,7 +6,7 @@ export const registerSchema = z.object({
   businessName: z.string().min(2, "Бизнес атын жазыңыз"),
   phone: z.string().min(6, "Телефон номерин туура жазыңыз"),
   email: z.string().email("Email туура эмес"),
-  password: z.string().min(6, "Пароль эң аз дегенде 6 белгиден турушу керек"),
+  password: z.string().min(8, "Пароль эң аз дегенде 8 белгиден турушу керек"),
   businessType: businessTypeSchema.default("GENERAL"),
 });
 

@@ -13,9 +13,11 @@ import * as supplierService from "../../services/supplier.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatMoney } from "../../utils/format";
 import type { Supplier } from "../../types";
+import { usePermissions } from "../../hooks/usePermissions";
 
 export default function Suppliers() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
@@ -84,16 +86,18 @@ export default function Suppliers() {
           <h1 className="page-title">{t("suppliers.title")}</h1>
           <p className="page-subtitle">{t("suppliers.subtitle")}</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setDrawerOpen(true);
-          }}
-        >
-          <Plus size={18} />
-          {t("suppliers.add")}
-        </button>
+        {can("suppliers.manage") && (
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setEditing(null);
+              setDrawerOpen(true);
+            }}
+          >
+            <Plus size={18} />
+            {t("suppliers.add")}
+          </button>
+        )}
       </div>
 
       <div className="card card-pad row gap-4" style={{ background: "linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600))", color: "#fff" }}>
@@ -126,9 +130,11 @@ export default function Suppliers() {
             title={t("suppliers.emptyNone")}
             subtitle={t("suppliers.emptyNoneSubtitle")}
             action={
-              <button className="btn btn-primary" style={{ marginTop: "var(--space-2)" }} onClick={() => setDrawerOpen(true)}>
-                <Plus size={16} /> {t("suppliers.add")}
-              </button>
+              can("suppliers.manage") && (
+                <button className="btn btn-primary" style={{ marginTop: "var(--space-2)" }} onClick={() => setDrawerOpen(true)}>
+                  <Plus size={16} /> {t("suppliers.add")}
+                </button>
+              )
             }
           />
         ) : (
@@ -162,18 +168,22 @@ export default function Suppliers() {
                     <td className="text-muted">{s.lastDeliveryAt ? formatDate(s.lastDeliveryAt) : "—"}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="table-actions">
-                        <button
-                          className="btn btn-ghost btn-icon btn-sm"
-                          onClick={() => {
-                            setEditing(s);
-                            setDrawerOpen(true);
-                          }}
-                        >
-                          <SquarePen size={16} />
-                        </button>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setDeleteTarget(s)}>
-                          <Trash2 size={16} color="var(--color-danger-text)" />
-                        </button>
+                        {can("suppliers.manage") && (
+                          <button
+                            className="btn btn-ghost btn-icon btn-sm"
+                            onClick={() => {
+                              setEditing(s);
+                              setDrawerOpen(true);
+                            }}
+                          >
+                            <SquarePen size={16} />
+                          </button>
+                        )}
+                        {can("suppliers.delete") && (
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setDeleteTarget(s)}>
+                            <Trash2 size={16} color="var(--color-danger-text)" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

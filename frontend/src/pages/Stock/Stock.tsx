@@ -25,6 +25,7 @@ import { StockMovementModal } from "./StockMovementModal";
 import { TransferModal } from "./TransferModal";
 import { useToast } from "../../hooks/useToast";
 import { useAuth } from "../../hooks/useAuth";
+import { sessionCan } from "../../hooks/usePermissions";
 import { useLabels } from "../../hooks/useLabels";
 import { useLocations } from "../../hooks/useLocations";
 import * as productService from "../../services/product.service";
@@ -53,7 +54,7 @@ export default function Stock() {
   const labels = useLabels();
   const { locations, multiple } = useLocations();
   const trackExpiry = !!session?.business.trackExpiry;
-  const canManage = session?.role !== "CASHIER";
+  const canManage = sessionCan(session, "stock.adjust");
 
   const [tab, setTab] = useState<TabKey>("BALANCE");
   const [locationFilter, setLocationFilter] = useState("");

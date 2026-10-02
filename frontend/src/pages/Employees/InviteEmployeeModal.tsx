@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/ui/Modal";
 import { useLabels } from "../../hooks/useLabels";
-import type { Role } from "../../types";
+import { ASSIGNABLE_ROLES, type AssignableRole } from "../../types";
 
 interface InviteEmployeeModalProps {
   open: boolean;
   onClose: () => void;
   submitting: boolean;
-  onSubmit: (values: { name: string; email: string; phone: string; password: string; role: Exclude<Role, "OWNER"> }) => Promise<void>;
+  onSubmit: (values: { name: string; email: string; phone: string; password: string; role: AssignableRole }) => Promise<void>;
 }
 
 export function InviteEmployeeModal({ open, onClose, submitting, onSubmit }: InviteEmployeeModalProps) {
@@ -18,7 +18,7 @@ export function InviteEmployeeModal({ open, onClose, submitting, onSubmit }: Inv
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Exclude<Role, "OWNER">>("CASHIER");
+  const [role, setRole] = useState<AssignableRole>("CASHIER");
 
   useEffect(() => {
     if (open) {
@@ -58,14 +58,18 @@ export function InviteEmployeeModal({ open, onClose, submitting, onSubmit }: Inv
         <div className="form-grid">
           <div className="field">
             <label className="field-label">{t("employees.inviteModal.tempPassword")}</label>
-            <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
           </div>
           <div className="field">
             <label className="field-label">{t("employees.inviteModal.role")}</label>
-            <select className="select" value={role} onChange={(e) => setRole(e.target.value as Exclude<Role, "OWNER">)}>
-              <option value="ADMIN">{labels.role.ADMIN}</option>
-              <option value="CASHIER">{labels.role.CASHIER}</option>
+            <select className="select" value={role} onChange={(e) => setRole(e.target.value as AssignableRole)}>
+              {ASSIGNABLE_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {labels.role[r]}
+                </option>
+              ))}
             </select>
+            <span className="field-hint">{t(`employees.roleHints.${role}`)}</span>
           </div>
         </div>
         <p className="field-hint">{t("employees.inviteModal.hint")}</p>

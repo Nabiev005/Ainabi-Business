@@ -11,6 +11,7 @@ import * as shiftService from "../../services/shift.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDateTime, formatMoney } from "../../utils/format";
 import type { CashShift, CashShiftListItem } from "../../types";
+import { usePermissions } from "../../hooks/usePermissions";
 
 /** The cash flow of a shift, line by line, ending in the expected drawer amount. */
 function ShiftBreakdown({ shift }: { shift: CashShift }) {
@@ -100,6 +101,9 @@ function ShiftBreakdown({ shift }: { shift: CashShift }) {
 
 export default function Shifts() {
   const { t } = useTranslation();
+  const { can } = usePermissions();
+  // The accountant only reviews shifts; it never runs a cash drawer itself.
+  const canUseShift = can("shifts.use");
   const { showToast } = useToast();
   const [current, setCurrent] = useState<CashShift | null | undefined>(undefined);
   const [history, setHistory] = useState<CashShiftListItem[] | null>(null);
@@ -117,8 +121,9 @@ export default function Shifts() {
   const [detail, setDetail] = useState<CashShift | null>(null);
 
   const loadCurrent = useCallback(() => {
+    if (!canUseShift) return;
     shiftService.getCurrentShift().then(setCurrent).catch(() => setCurrent(null));
-  }, []);
+  }, [canUseShift]);
 
   const loadHistory = useCallback(() => {
     shiftService
@@ -197,6 +202,7 @@ export default function Shifts() {
         </div>
       </div>
 
+      {canUseShift && (
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">
@@ -240,6 +246,7 @@ export default function Shifts() {
           )}
         </div>
       </div>
+      )}
 
       <div className="card">
         <div className="card-header">

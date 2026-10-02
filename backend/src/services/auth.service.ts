@@ -7,13 +7,14 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/
 import { GoogleAuthInput, LoginInput, RegisterInput } from "../validators/auth.validator";
 import { applyTemplate } from "./settings.service";
 import type { Lang } from "../i18n/messages";
+import { permissionsFor, Role } from "../config/permissions";
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
 const googleClient = new OAuth2Client(env.google.clientId);
 
 function serializeSession(employee: {
   id: string;
-  role: "OWNER" | "ADMIN" | "CASHIER";
+  role: Role;
   locationId?: string | null;
   business: { id: string; name: string; currency: string; phone?: string | null; address?: string | null; qrPaymentInfo?: string | null };
   user: { id: string; name: string; email: string; phone: string | null; avatarUrl: string | null; provider: string };
@@ -22,12 +23,14 @@ function serializeSession(employee: {
     user: employee.user,
     business: employee.business,
     role: employee.role,
+    // What this role may do — the frontend shows menus/buttons from this list.
+    permissions: permissionsFor(employee.role),
     employeeId: employee.id,
     locationId: employee.locationId ?? null,
   };
 }
 
-async function issueTokens(userId: string, businessId: string, employeeId: string, role: "OWNER" | "ADMIN" | "CASHIER") {
+async function issueTokens(userId: string, businessId: string, employeeId: string, role: Role) {
   const accessToken = signAccessToken({ userId, businessId, employeeId, role });
   const refreshToken = signRefreshToken({ userId });
 
@@ -254,7 +257,7 @@ export async function logout(refreshTokenValue: string) {
 
 export async function getSession(userId: string, businessId: string) {
   const employee = await prisma.employee.findFirst({
-    where: { userId, businessId },
+    where: { userId, businessId, status: "ACTIVE" },
     include: { business: true, user: true },
   });
   if (!employee) throw ApiError.unauthorized();
