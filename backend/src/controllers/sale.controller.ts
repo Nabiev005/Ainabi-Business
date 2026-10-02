@@ -21,7 +21,7 @@ export const getHandler = asyncHandler(async (req: Request, res: Response) => {
 
 export const createHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = createSaleSchema.parse(req.body);
-  const sale = await saleService.createSale(req.auth!.businessId, req.auth!.employeeId, input);
+  const sale = await saleService.createSale(req.auth!.businessId, req.auth!.employeeId, req.auth!.role, input);
   res.status(201).json(sale);
 });
 

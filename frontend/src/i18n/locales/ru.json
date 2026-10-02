@@ -943,7 +943,10 @@
       "WHOLESALE": "Опт"
     },
     "stageBlockedTitle": "Нельзя продать",
-    "stageBlocked": "«{{name}}» сейчас на этапе «{{stage}}». Сначала переведите его дальше в воронке."
+    "stageBlocked": "«{{name}}» сейчас на этапе «{{stage}}». Сначала переведите его дальше в воронке.",
+    "discountLimitTitle": "Скидка превышает лимит",
+    "discountLimit": "Не более {{percent}}% — {{amount}}. За большей скидкой обратитесь к менеджеру.",
+    "discountLimitHint": "Скидка: не более {{percent}}% ({{amount}})"
   },
   "stock": {
     "title": "Склад",
@@ -1442,7 +1445,9 @@
       "archive": "В архив",
       "restore": "Вернуть",
       "stats": "сотрудников: {{employees}} · товаров: {{stock}} ед."
-    }
+    },
+    "maxDiscountPercent": "Максимальная скидка продавца (%)",
+    "maxDiscountPercentHint": "Продавец не может дать на чек скидку больше этого процента. Админ и Менеджер не ограничены."
   },
   "businessTypes": {
     "GENERAL": "Общий магазин",

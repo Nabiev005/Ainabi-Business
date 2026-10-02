@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { toNumber, round2 } from "../utils/money";
 import { changeStock, consumeBatches, findOpenShift, getDefaultLocation, nextNumber, resolveLocationId } from "../utils/stockLedger";
 import { CreateReturnInput, CreateSaleInput, SaleQuery } from "../validators/sale.validator";
+import { hasPermission, Role } from "../config/permissions";
 
 function addMonths(date: Date, months: number) {
   const result = new Date(date);
@@ -15,7 +16,7 @@ function addMonths(date: Date, months: number) {
 // Create sale
 // ---------------------------------------------------------------------------
 
-export async function createSale(businessId: string, employeeId: string, input: CreateSaleInput) {
+export async function createSale(businessId: string, employeeId: string, role: Role, input: CreateSaleInput) {
   const productIds = [...new Set(input.items.map((i) => i.productId))];
   const [products, business] = await Promise.all([
     prisma.product.findMany({ where: { id: { in: productIds }, businessId }, include: { packages: true, stage: true } }),
@@ -107,6 +108,13 @@ export async function createSale(businessId: string, employeeId: string, input: 
   });
 
   const discount = round2(Math.min(input.discount, subtotal));
+  // Sellers are capped (owner sets the limit); owner/manager aren't.
+  if (discount > 0 && !hasPermission(role, "discounts.unlimited")) {
+    const maxDiscount = round2((subtotal * business.maxDiscountPercent) / 100);
+    if (discount > maxDiscount + 0.005) {
+      throw ApiError.badRequest(`Скидка лимиттен ашты: эң көп ${business.maxDiscountPercent}% (${maxDiscount} сом).`);
+    }
+  }
   const total = round2(Math.max(0, subtotal - discount));
 
   if (input.paymentMethod === "DEBT" && !input.customerId) {

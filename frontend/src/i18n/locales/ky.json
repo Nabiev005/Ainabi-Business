@@ -943,7 +943,10 @@
       "WHOLESALE": "Дүң"
     },
     "stageBlockedTitle": "Сатууга болбойт",
-    "stageBlocked": "\"{{name}}\" азыр \"{{stage}}\" этабында. Адегенде воронкада аны кийинки этапка жылдырыңыз."
+    "stageBlocked": "\"{{name}}\" азыр \"{{stage}}\" этабында. Адегенде воронкада аны кийинки этапка жылдырыңыз.",
+    "discountLimitTitle": "Скидка лимиттен ашты",
+    "discountLimit": "Эң көп {{percent}}% — {{amount}}. Чоңураак скидка үчүн менеджерге кайрылыңыз.",
+    "discountLimitHint": "Скидка: эң көп {{percent}}% ({{amount}})"
   },
   "stock": {
     "title": "Склад",
@@ -1442,7 +1445,9 @@
       "archive": "Архивге",
       "restore": "Кайтаруу",
       "stats": "{{employees}} кызматкер · {{stock}} бирдик товар"
-    }
+    },
+    "maxDiscountPercent": "Сатуучунун эң көп скидкасы (%)",
+    "maxDiscountPercentHint": "Сатуучу бир чекке ушул пайыздан ашык скидка бере албайт. Админ жана Менеджер чектелбейт."
   },
   "businessTypes": {
     "GENERAL": "Жалпы дүкөн",

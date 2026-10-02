@@ -62,46 +62,49 @@ model RefreshToken {
 }
 
 model Business {
-  id                String   @id @default(cuid())
-  name              String
-  ownerId           String
-  owner             User     @relation("BusinessOwner", fields: [ownerId], references: [id])
-  phone             String?
-  address           String?
-  currency          String   @default("KGS")
+  id                 String   @id @default(cuid())
+  name               String
+  ownerId            String
+  owner              User     @relation("BusinessOwner", fields: [ownerId], references: [id])
+  phone              String?
+  address            String?
+  currency           String   @default("KGS")
   // Freeform "how to pay us by QR" text (e.g. "MBank +996 700 123 456") —
   // there's no single scannable payment-QR standard across KG banks, so
   // this is shown to the cashier/customer as read text, not parsed.
-  qrPaymentInfo     String?
+  qrPaymentInfo      String?
+  // Largest discount (percent of the receipt) a seller may give at the POS.
+  // Owner and manager are not limited — see "discounts.unlimited".
+  maxDiscountPercent Int      @default(10)
   // Which preset the owner picked ("PHONES", "LAPTOPS", "CLOTHING", ...) —
   // see src/config/businessTemplates.ts. Only a label; the actual behaviour
   // lives in the fields/flags below, which the owner can edit freely.
-  businessType      String   @default("GENERAL")
+  businessType       String   @default("GENERAL")
   // The business's own extra product fields (brand, RAM, size, expiry
   // date...) as ProductFieldDef[] — shape validated by settings.validator.
-  productFields     Json     @default("[]")
+  productFields      Json     @default("[]")
   // Serial/IMEI numbers are captured per sold unit at the POS.
-  trackSerials      Boolean  @default(false)
+  trackSerials       Boolean  @default(false)
   // Products carry a warranty period; sale items get a warrantyUntil date.
-  trackWarranty     Boolean  @default(false)
+  trackWarranty      Boolean  @default(false)
   // Stock arrives in batches with expiry dates; sales consume the batch
   // that expires first (FEFO) and the dashboard warns before expiry.
-  trackExpiry       Boolean  @default(false)
+  trackExpiry        Boolean  @default(false)
   // Repair orders module (phone / laptop / appliance workshops).
-  enableRepairs     Boolean  @default(false)
+  enableRepairs      Boolean  @default(false)
   // The POS refuses to sell until the cashier has opened a cash shift.
-  requireShift      Boolean  @default(false)
+  requireShift       Boolean  @default(false)
   // Scale-printed EAN-13 codes (prefix 2, PLU + weight) are parsed at the POS.
-  weightBarcodes    Boolean  @default(false)
+  weightBarcodes     Boolean  @default(false)
   // Products can be flagged "prescription only"; the POS asks to confirm.
-  checkPrescription Boolean  @default(false)
+  checkPrescription  Boolean  @default(false)
   // Per-business running numbers for human-friendly document numbers.
-  saleCounter       Int      @default(0)
-  receiptCounter    Int      @default(0)
-  repairCounter     Int      @default(0)
-  inventoryCounter  Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  saleCounter        Int      @default(0)
+  receiptCounter     Int      @default(0)
+  repairCounter      Int      @default(0)
+  inventoryCounter   Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   employees        Employee[]
   categories       Category[]

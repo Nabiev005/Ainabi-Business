@@ -11,6 +11,7 @@ export type Permission =
   | "pos.sell"
   | "sales.view"
   | "sales.return"
+  | "discounts.unlimited"
   | "shifts.use"
   | "shifts.viewAll"
   | "repairs.manage"
@@ -108,6 +109,8 @@ export interface Business {
   phone?: string | null;
   address?: string | null;
   qrPaymentInfo?: string | null;
+  /** Max discount (% of the receipt) a seller may give; owner/manager are unlimited. */
+  maxDiscountPercent?: number;
   businessType?: string;
   productFields?: ProductFieldDef[];
   trackSerials?: boolean;

@@ -4,6 +4,10 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  // Demo data with a well-known password must never land in a real database.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Seed is for local development only — refusing to run with NODE_ENV=production.");
+  }
   const passwordHash = await bcrypt.hash("password123", 12);
 
   const user = await prisma.user.upsert({

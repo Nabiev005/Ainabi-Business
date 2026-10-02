@@ -7,6 +7,7 @@ export const updateBusinessSchema = z.object({
   address: z.string().optional().nullable(),
   currency: z.string().min(1).default("KGS"),
   qrPaymentInfo: z.string().optional().nullable(),
+  maxDiscountPercent: z.coerce.number().int().min(0, "Скидка 0дон 100гө чейин болушу керек").max(100, "Скидка 0дон 100гө чейин болушу керек").optional(),
 });
 
 export const businessTypeSchema = z.string().refine((v) => BUSINESS_TYPE_IDS.includes(v), "Бизнес түрү туура эмес");
