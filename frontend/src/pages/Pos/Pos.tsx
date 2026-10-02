@@ -333,6 +333,11 @@ export default function Pos() {
   }
 
   function addToCart(product: Product, options: { packageId?: string | null; quantity?: number } = {}) {
+    // Product pipeline: still in a "not for sale" stage (e.g. being checked).
+    if (product.stage?.blocksSale) {
+      showToast({ variant: "error", title: t("pos.stageBlockedTitle"), message: t("pos.stageBlocked", { name: product.name, stage: product.stage.name }) });
+      return;
+    }
     const packageId = options.packageId ?? null;
     const pkg = packageId ? product.packages.find((p) => p.id === packageId) : null;
     const step = options.quantity ?? 1;

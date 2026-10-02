@@ -166,3 +166,25 @@
     grid-template-columns: 1fr 1fr auto;
   }
 }
+
+/* Pipeline stage of the product (colour = the stage's own colour). */
+.product-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.product-stage-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}

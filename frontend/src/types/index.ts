@@ -34,6 +34,11 @@ export type Permission =
   | "expenses.view"
   | "expenses.manage"
   | "employees.manage"
+  | "tasks.manage"
+  | "analytics.view"
+  | "pipeline.view"
+  | "pipeline.move"
+  | "pipeline.configure"
   | "settings.business"
   | "settings.products";
 export type EmployeeStatus = "ACTIVE" | "INACTIVE";
@@ -138,6 +143,8 @@ export interface Category {
 export interface Product {
   id: string;
   name: string;
+  /** Where the product is in the business's pipeline (null = no stage). */
+  stage?: { id: string; name: string; color: string; blocksSale: boolean } | null;
   sku: string | null;
   barcode: string | null;
   categoryId: string | null;

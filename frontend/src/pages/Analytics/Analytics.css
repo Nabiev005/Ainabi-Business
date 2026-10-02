@@ -1,0 +1,133 @@
+.analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--space-6);
+}
+
+@media (max-width: 1100px) {
+  .analytics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Profit & loss statement */
+.pnl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.pnl-table td {
+  padding: 7px 0;
+  color: var(--color-text-secondary);
+}
+
+.pnl-table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.pnl-minus td:last-child {
+  color: var(--color-text-secondary);
+}
+
+.pnl-subtotal td {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  border-top: 1px solid var(--color-border);
+}
+
+.pnl-total td {
+  padding-top: 12px;
+  font-size: var(--font-size-md, 15px);
+  font-weight: 800;
+  color: var(--color-success-text);
+  border-top: 2px solid var(--color-border-strong);
+}
+
+.pnl-total td:last-child {
+  color: var(--color-success-text);
+}
+
+.pnl-total-loss td,
+.pnl-total-loss td:last-child {
+  color: var(--color-danger-text);
+}
+
+.pnl-footnote {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.analytics-legend {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.analytics-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analytics-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* Expenses by category — single-hue magnitude bars */
+.expense-bar-row {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+.expense-bar-label {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense-bar-track {
+  height: 10px;
+  border-radius: 4px;
+  background: var(--color-surface-muted);
+  overflow: hidden;
+}
+
+.expense-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--color-primary-500);
+  min-width: 4px;
+}
+
+.expense-bar-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .expense-bar-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .expense-bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
