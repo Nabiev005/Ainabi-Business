@@ -17,6 +17,8 @@ import shiftRoutes from "./shift.routes";
 import taskRoutes from "./task.routes";
 import pipelineRoutes from "./pipeline.routes";
 import analyticsRoutes from "./analytics.routes";
+import billingRoutes from "./billing.routes";
+import platformRoutes from "./platform.routes";
 
 const router = Router();
 
@@ -38,5 +40,7 @@ router.use("/shifts", shiftRoutes);
 router.use("/tasks", taskRoutes);
 router.use("/pipeline", pipelineRoutes);
 router.use("/analytics", analyticsRoutes);
+router.use("/billing", billingRoutes);
+router.use("/platform", platformRoutes);
 
 export default router;

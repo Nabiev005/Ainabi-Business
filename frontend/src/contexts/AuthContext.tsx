@@ -10,6 +10,8 @@ interface AuthContextValue {
   loginWithGoogle: (idToken: string) => Promise<void>;
   register: (payload: authService.RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
+  /** Sets a new password; the server signs out every other session. */
+  changePassword: (payload: { currentPassword?: string; newPassword: string }) => Promise<void>;
   /** Patches session.business in place — e.g. right after Settings saves an
    * update, so other pages (POS's QR payment screen) see it without
    * waiting for the next token refresh. */
@@ -71,6 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(result.session);
   }, []);
 
+  const changePassword = useCallback(async (payload: { currentPassword?: string; newPassword: string }) => {
+    const result = await authService.changePassword(payload);
+    tokenStore.setAccessToken(result.accessToken);
+    setSession(result.session);
+  }, []);
+
   const logout = useCallback(async () => {
     clearSession();
     authService.logout().catch(() => undefined);
@@ -81,8 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, isLoading, login, loginWithGoogle, register, logout, updateSessionBusiness }),
-    [session, isLoading, login, loginWithGoogle, register, logout, updateSessionBusiness],
+    () => ({ session, isLoading, login, loginWithGoogle, register, logout, changePassword, updateSessionBusiness }),
+    [session, isLoading, login, loginWithGoogle, register, logout, changePassword, updateSessionBusiness],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

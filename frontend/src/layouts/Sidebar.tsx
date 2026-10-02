@@ -23,27 +23,34 @@ import {
   ChartPie,
   ListTodo,
   SquareKanban,
+  Lock,
+  Gem,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { sessionCan } from "../hooks/usePermissions";
 import type { Permission, Session } from "../types";
+import type { Feature } from "../services/billing.service";
 
 const can = (s: Session, ...permissions: Permission[]) => permissions.some((p) => sessionCan(s, p));
 
 // Each role only sees the screens it can actually use (see backend config/permissions.ts).
-const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show: (s: Session) => boolean }> = [
+/** Not in the plan: still listed (so owners know it exists), with a lock. */
+const locked = (s: Session, feature?: Feature) => !!feature && !s.isPlatformAdmin && !s.subscription?.features.includes(feature);
+
+const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show: (s: Session) => boolean; feature?: Feature }> = [
   { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, end: true, show: (s) => can(s, "reports.view") },
-  { to: "/analytics", key: "analytics", icon: ChartPie, show: (s) => can(s, "analytics.view") },
-  { to: "/tasks", key: "tasks", icon: ListTodo, show: () => true },
+  { to: "/analytics", key: "analytics", icon: ChartPie, show: (s) => can(s, "analytics.view"), feature: "analytics" },
+  { to: "/tasks", key: "tasks", icon: ListTodo, show: () => true, feature: "tasks" },
   { to: "/pos", key: "pos", icon: ShoppingCart, show: (s) => can(s, "pos.sell") },
   { to: "/sales", key: "sales", icon: ScrollText, show: (s) => can(s, "sales.view") },
   { to: "/shifts", key: "shifts", icon: Coins, show: (s) => can(s, "shifts.use", "shifts.viewAll") },
-  { to: "/repairs", key: "repairs", icon: Wrench, show: (s) => !!s.business.enableRepairs && can(s, "repairs.manage") },
+  { to: "/repairs", key: "repairs", icon: Wrench, show: (s) => !!s.business.enableRepairs && can(s, "repairs.manage"), feature: "repairs" },
   { to: "/products", key: "products", icon: Package, show: (s) => can(s, "products.view") },
-  { to: "/pipeline", key: "pipeline", icon: SquareKanban, show: (s) => can(s, "pipeline.view") },
+  { to: "/pipeline", key: "pipeline", icon: SquareKanban, show: (s) => can(s, "pipeline.view"), feature: "pipeline" },
   { to: "/stock", key: "stock", icon: Warehouse, show: (s) => can(s, "stock.view") },
-  { to: "/receiving", key: "receiving", icon: PackagePlus, show: (s) => can(s, "stock.receive") },
-  { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: (s) => can(s, "stock.inventory") },
+  { to: "/receiving", key: "receiving", icon: PackagePlus, show: (s) => can(s, "stock.receive"), feature: "receiving" },
+  { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: (s) => can(s, "stock.inventory"), feature: "inventory" },
   { to: "/customers", key: "customers", icon: Users, show: (s) => can(s, "customers.view") },
   { to: "/debts", key: "debts", icon: Wallet, show: (s) => can(s, "debts.view") },
   { to: "/suppliers", key: "suppliers", icon: Truck, show: (s) => can(s, "suppliers.view") },
@@ -85,11 +92,24 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
             >
               <item.icon size={19} />
               {!collapsed && <span>{t(`nav.${item.key}`)}</span>}
+              {!collapsed && session && locked(session, item.feature) && <Lock size={13} className="sidebar-link-lock" />}
             </NavLink>
           ))}
         </nav>
 
         <div className="sidebar-footer">
+          {session?.isPlatformAdmin && (
+            <NavLink to="/platform" className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`} onClick={onCloseMobile}>
+              <Building2 size={19} />
+              {!collapsed && <span>{t("nav.platform")}</span>}
+            </NavLink>
+          )}
+          {session && sessionCan(session, "settings.business") && (
+            <NavLink to="/billing" className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`} onClick={onCloseMobile}>
+              <Gem size={19} />
+              {!collapsed && <span>{t("nav.billing")}</span>}
+            </NavLink>
+          )}
           <NavLink to="/settings" className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`} onClick={onCloseMobile}>
             <Settings size={19} />
             {!collapsed && <span>{t("nav.settings")}</span>}

@@ -48,7 +48,7 @@ const authBruteForceLimiter = rateLimit({
     message: translate("Аракеттер өтө көп болду. Бир аз күтүп, кайра аракет кылыңыз.", req.lang),
   }),
 });
-app.use(["/api/auth/login", "/api/auth/register", "/api/auth/google"], authBruteForceLimiter);
+app.use(["/api/auth/login", "/api/auth/register", "/api/auth/google", "/api/auth/change-password"], authBruteForceLimiter);
 
 // Looser limit across the whole API — defense-in-depth without getting in the
 // way of a busy cashier terminal hammering /sales and /products all day.

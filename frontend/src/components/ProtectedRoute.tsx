@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../hooks/useAuth";
+import { ForcePasswordChange } from "./ForcePasswordChange";
 
 export function ProtectedRoute() {
   const { t } = useTranslation();
@@ -16,6 +17,10 @@ export function ProtectedRoute() {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (session.user.mustChangePassword) {
+    return <ForcePasswordChange />;
   }
 
   return <Outlet />;

@@ -17,5 +17,9 @@ export const updateEmployeeSchema = z.object({
   locationId: z.string().optional().nullable(),
 });
 
+export const resetEmployeePasswordSchema = z.object({
+  password: z.string().min(8, "Пароль эң аз дегенде 8 белгиден турушу керек").max(200),
+});
+
 export type InviteEmployeeInput = z.infer<typeof inviteEmployeeSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;

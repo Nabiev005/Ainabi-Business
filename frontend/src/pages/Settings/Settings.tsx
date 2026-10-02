@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe, QrCode, Save, User } from "lucide-react";
+import { Globe, KeyRound, QrCode, Save, User } from "lucide-react";
+import { ChangePasswordForm } from "../../components/ChangePasswordForm";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useAuth } from "../../hooks/useAuth";
 import { sessionCan } from "../../hooks/usePermissions";
@@ -139,6 +140,18 @@ export default function Settings() {
           </span>
           <span className="text-muted">{session?.user.email}</span>
           {session?.user.phone && <span className="text-muted">{session.user.phone}</span>}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">
+            <KeyRound size={16} style={{ marginRight: 6, verticalAlign: -2 }} />
+            {session?.user.hasPassword === false ? t("password.setTitle") : t("password.title")}
+          </h2>
+        </div>
+        <div className="card-pad">
+          <ChangePasswordForm />
         </div>
       </div>
 

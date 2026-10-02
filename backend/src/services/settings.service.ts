@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { BUSINESS_TEMPLATES, findTemplate, localizeTemplate, MODULE_KEYS } from "../config/businessTemplates";
 import { ApiError } from "../utils/ApiError";
+import { PLANS, PlanId } from "../config/plans";
 import { getDefaultLocation } from "../utils/stockLedger";
 import type { Lang } from "../i18n/messages";
 import {
@@ -71,7 +72,17 @@ export async function listLocations(businessId: string) {
   }));
 }
 
-export function createLocation(businessId: string, input: LocationInput) {
+export async function createLocation(businessId: string, input: LocationInput) {
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { plan: true } });
+  const max = PLANS[business.plan as PlanId].maxLocations;
+  if (max !== null) {
+    // The default location always exists, so count it in.
+    await getDefaultLocation(prisma, businessId);
+    const count = await prisma.location.count({ where: { businessId, archived: false } });
+    if (count >= max) {
+      throw new ApiError(402, `Тарифиңизде эң көп ${max} филиал. Көбүрөөк ачуу үчүн тарифти жогорулатыңыз.`, { code: "PLAN_LIMIT" });
+    }
+  }
   return prisma.location.create({ data: { businessId, name: input.name, address: input.address || null } });
 }
 

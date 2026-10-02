@@ -758,3 +758,96 @@
 .text-success {
   color: var(--color-success-text);
 }
+
+/* First sign-in with an owner-chosen password. */
+.force-password-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-bg);
+}
+
+.force-password-card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.force-password-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+/* Banner above every page (trial / ending soon / expired). */
+.subscription-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 10px var(--space-5);
+  font-size: var(--font-size-sm);
+  border-bottom: 1px solid transparent;
+}
+
+.subscription-banner-info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border-color: var(--color-info-border);
+}
+
+.subscription-banner-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-color: var(--color-warning-border);
+}
+
+.subscription-banner-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+  font-weight: 600;
+}
+
+.subscription-banner-action {
+  margin-left: auto;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+}
+
+.subscription-banner-note {
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+/* Locked module (not in the plan). */
+.upgrade-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 560px;
+}
+
+.upgrade-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.sidebar-link-lock {
+  margin-left: auto;
+  opacity: 0.6;
+}

@@ -122,3 +122,21 @@
   height: 1px;
   background: var(--color-border);
 }
+
+/* Forgot-password: the two ways back in. */
+.forgot-option {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--font-size-sm);
+}
+
+.forgot-option > svg {
+  flex-shrink: 0;
+  color: var(--color-primary-600);
+  margin-top: 2px;
+}

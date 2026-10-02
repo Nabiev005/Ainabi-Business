@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
 import { requirePermission } from "../middleware/requireRole";
+import { requireFeature } from "../middleware/subscription";
 import {
   createHandler,
   createInventoryHandler,
@@ -28,11 +29,11 @@ router.post("/", requirePermission("stock.adjust"), createHandler);
 
 router.get("/receipts", requirePermission("stock.view"), listReceiptsHandler);
 router.get("/receipts/:id", requirePermission("stock.view"), getReceiptHandler);
-router.post("/receipts", requirePermission("stock.receive"), createReceiptHandler);
+router.post("/receipts", requireFeature("receiving"), requirePermission("stock.receive"), createReceiptHandler);
 
 router.get("/inventory", requirePermission("stock.view"), listInventoryHandler);
 router.get("/inventory/:id", requirePermission("stock.view"), getInventoryHandler);
-router.post("/inventory", requirePermission("stock.inventory"), createInventoryHandler);
+router.post("/inventory", requireFeature("inventory"), requirePermission("stock.inventory"), createInventoryHandler);
 
 router.post("/transfers", requirePermission("stock.adjust"), createTransferHandler);
 
