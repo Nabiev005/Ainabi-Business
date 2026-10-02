@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 *.log
+# Database dumps contain customer data — never commit them.
+backups

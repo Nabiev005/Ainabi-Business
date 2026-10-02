@@ -26,6 +26,11 @@ export async function updateEmployee(
   return data;
 }
 
+/** Owner gives the employee a temporary password; they set their own on next sign-in. */
+export async function resetEmployeePassword(id: string, password: string): Promise<void> {
+  await api.post(`/employees/${id}/password`, { password });
+}
+
 export async function deleteEmployee(id: string): Promise<void> {
   await api.delete(`/employees/${id}`);
 }

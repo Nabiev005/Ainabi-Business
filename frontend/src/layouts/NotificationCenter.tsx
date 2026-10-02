@@ -49,6 +49,7 @@ export function NotificationCenter() {
       dashboardService.getLowStock(),
       debtService.getDebtSummary().catch(() => ({ totalOutstanding: 0, openDebts: 0 })),
       supplierService.getSupplierSummary().catch(() => ({ totalOutstanding: 0, openDebts: 0 })),
+      // Off the plan (402) or not allowed: just no task notifications.
       taskService.getTaskNotifications().catch(() => ({ unseen: 0, tasks: [] as Task[] })),
     ])
       .then(([stock, customerDebts, supplierDebts, myTasks]) => {

@@ -3,7 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
 import { clearRefreshCookie, setRefreshCookie } from "../utils/cookies";
 import { env } from "../config/env";
-import { googleAuthSchema, loginSchema, registerSchema } from "../validators/auth.validator";
+import { changePasswordSchema, googleAuthSchema, loginSchema, registerSchema } from "../validators/auth.validator";
 import * as authService from "../services/auth.service";
 
 export const registerHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -44,6 +44,13 @@ export const logoutHandler = asyncHandler(async (req: Request, res: Response) =>
   }
   clearRefreshCookie(res);
   res.status(204).send();
+});
+
+export const changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  const input = changePasswordSchema.parse(req.body);
+  const { accessToken, refreshToken, session } = await authService.changePassword(req.auth!, input);
+  setRefreshCookie(res, refreshToken);
+  res.status(200).json({ accessToken, session });
 });
 
 export const meHandler = asyncHandler(async (req: Request, res: Response) => {

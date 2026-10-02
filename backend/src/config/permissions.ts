@@ -28,6 +28,8 @@ export const PERMISSIONS = {
   "pos.sell": ["OWNER", "ADMIN", "CASHIER"],
   "sales.view": ["OWNER", "ADMIN", "ACCOUNTANT", "CASHIER"],
   "sales.return": MANAGEMENT,
+  // Everyone else is capped at Business.maxDiscountPercent per receipt.
+  "discounts.unlimited": MANAGEMENT,
 
   // Open/close one's own shift, cash in/out.
   "shifts.use": ["OWNER", "ADMIN", "CASHIER"],

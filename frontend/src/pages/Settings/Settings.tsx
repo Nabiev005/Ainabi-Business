@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe, QrCode, Save, User } from "lucide-react";
+import { Globe, KeyRound, QrCode, Save, User } from "lucide-react";
+import { ChangePasswordForm } from "../../components/ChangePasswordForm";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useAuth } from "../../hooks/useAuth";
 import { sessionCan } from "../../hooks/usePermissions";
@@ -16,7 +17,7 @@ export default function Settings() {
   const { session, updateSessionBusiness } = useAuth();
   const { showToast } = useToast();
   const [business, setBusiness] = useState<Business | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "", currency: "KGS", qrPaymentInfo: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", currency: "KGS", qrPaymentInfo: "", maxDiscountPercent: 10 });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function Settings() {
       .getBusiness()
       .then((b) => {
         setBusiness(b);
-        setForm({ name: b.name, phone: b.phone ?? "", address: b.address ?? "", currency: b.currency, qrPaymentInfo: b.qrPaymentInfo ?? "" });
+        setForm({ name: b.name, phone: b.phone ?? "", address: b.address ?? "", currency: b.currency, qrPaymentInfo: b.qrPaymentInfo ?? "", maxDiscountPercent: b.maxDiscountPercent ?? 10 });
       })
       .catch(() => undefined);
   }, []);
@@ -92,6 +93,19 @@ export default function Settings() {
             />
             <span className="field-hint">{t("settings.qrPaymentInfoHint")}</span>
           </div>
+          <div className="field" style={{ maxWidth: 260 }}>
+            <label className="field-label">{t("settings.maxDiscountPercent")}</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              className="input"
+              value={form.maxDiscountPercent}
+              onChange={(e) => setForm((f) => ({ ...f, maxDiscountPercent: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) }))}
+            />
+            <span className="field-hint">{t("settings.maxDiscountPercentHint")}</span>
+          </div>
           <div>
             <button type="submit" className="btn btn-primary" disabled={saving || !business}>
               <Save size={16} />
@@ -126,6 +140,18 @@ export default function Settings() {
           </span>
           <span className="text-muted">{session?.user.email}</span>
           {session?.user.phone && <span className="text-muted">{session.user.phone}</span>}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">
+            <KeyRound size={16} style={{ marginRight: 6, verticalAlign: -2 }} />
+            {session?.user.hasPassword === false ? t("password.setTitle") : t("password.title")}
+          </h2>
+        </div>
+        <div className="card-pad">
+          <ChangePasswordForm />
         </div>
       </div>
 

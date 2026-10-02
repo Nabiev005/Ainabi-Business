@@ -4,10 +4,11 @@ import { env } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 import { comparePassword, hashPassword, hashToken } from "../utils/password";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
-import { GoogleAuthInput, LoginInput, RegisterInput } from "../validators/auth.validator";
+import { ChangePasswordInput, GoogleAuthInput, LoginInput, RegisterInput } from "../validators/auth.validator";
 import { applyTemplate } from "./settings.service";
 import type { Lang } from "../i18n/messages";
 import { permissionsFor, Role } from "../config/permissions";
+import { PlanId, subscriptionInfo, TRIAL_PLAN, trialEndsAt } from "../config/plans";
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
 const googleClient = new OAuth2Client(env.google.clientId);
@@ -16,8 +17,18 @@ function serializeSession(employee: {
   id: string;
   role: Role;
   locationId?: string | null;
-  business: { id: string; name: string; currency: string; phone?: string | null; address?: string | null; qrPaymentInfo?: string | null };
-  user: { id: string; name: string; email: string; phone: string | null; avatarUrl: string | null; provider: string };
+  business: {
+    id: string;
+    name: string;
+    currency: string;
+    phone?: string | null;
+    address?: string | null;
+    qrPaymentInfo?: string | null;
+    plan: PlanId;
+    planExpiresAt: Date | null;
+    isTrial: boolean;
+  };
+  user: ReturnType<typeof toSessionUser>;
 }) {
   return {
     user: employee.user,
@@ -25,6 +36,8 @@ function serializeSession(employee: {
     role: employee.role,
     // What this role may do — the frontend shows menus/buttons from this list.
     permissions: permissionsFor(employee.role),
+    subscription: subscriptionInfo(employee.business),
+    isPlatformAdmin: env.platformAdminEmails.includes(employee.user.email.toLowerCase()),
     employeeId: employee.id,
     locationId: employee.locationId ?? null,
   };
@@ -52,14 +65,37 @@ async function primaryEmployeeFor(userId: string) {
   });
 }
 
-function toSessionUser(user: { id: string; name: string; email: string; phone: string | null; avatarUrl: string | null; provider: string }) {
-  return { id: user.id, name: user.name, email: user.email, phone: user.phone, avatarUrl: user.avatarUrl, provider: user.provider };
+function toSessionUser(user: {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  provider: string;
+  passwordHash?: string | null;
+  mustChangePassword?: boolean;
+}) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    avatarUrl: user.avatarUrl,
+    provider: user.provider,
+    hasPassword: !!user.passwordHash,
+    mustChangePassword: !!user.mustChangePassword,
+  };
 }
 
 export async function register(input: RegisterInput, lang: Lang = "ky") {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw ApiError.conflict("Бул email менен аккаунт мурунтан бар.");
+  }
+  // The platform owner's account is created through Google sign-in (Google
+  // proves the address is theirs), never through the open sign-up form.
+  if (env.platformAdminEmails.includes(input.email.trim().toLowerCase())) {
+    throw ApiError.forbidden("Бул email менен катталууга болбойт. «Google менен кирүү» баскычын колдонуңуз.");
   }
 
   const passwordHash = await hashPassword(input.password);
@@ -76,7 +112,7 @@ export async function register(input: RegisterInput, lang: Lang = "ky") {
     });
 
     const created = await tx.business.create({
-      data: { name: input.businessName, ownerId: user.id, phone: input.phone },
+      data: { name: input.businessName, ownerId: user.id, phone: input.phone, plan: TRIAL_PLAN, isTrial: true, planExpiresAt: trialEndsAt() },
     });
 
     const employee = await tx.employee.create({
@@ -189,7 +225,7 @@ export async function loginWithGoogle(input: GoogleAuthInput, lang: Lang = "ky")
         }));
 
       const createdBusiness = await tx.business.create({
-        data: { name: `${name} дүкөнү`, ownerId: newUser.id },
+        data: { name: `${name} дүкөнү`, ownerId: newUser.id, plan: TRIAL_PLAN, isTrial: true, planExpiresAt: trialEndsAt() },
       });
 
       const newEmployee = await tx.employee.create({
@@ -263,4 +299,32 @@ export async function getSession(userId: string, businessId: string) {
   if (!employee) throw ApiError.unauthorized();
 
   return serializeSession({ id: employee.id, role: employee.role, business: employee.business, user: toSessionUser(employee.user) });
+}
+
+/**
+ * The signed-in person sets a new password. Every other session of theirs is
+ * signed out (all refresh tokens revoked) and this one gets fresh tokens.
+ */
+export async function changePassword(
+  auth: { userId: string; businessId: string; employeeId: string; role: Role },
+  input: ChangePasswordInput,
+) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: auth.userId } });
+  if (user.passwordHash) {
+    if (!input.currentPassword || !(await comparePassword(input.currentPassword, user.passwordHash))) {
+      throw ApiError.badRequest("Учурдагы пароль туура эмес.");
+    }
+    if (await comparePassword(input.newPassword, user.passwordHash)) {
+      throw ApiError.badRequest("Жаңы пароль мурункусунан башка болушу керек.");
+    }
+  }
+
+  const passwordHash = await hashPassword(input.newPassword);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: false } }),
+    prisma.refreshToken.updateMany({ where: { userId: user.id, revoked: false }, data: { revoked: true } }),
+  ]);
+
+  const tokens = await issueTokens(auth.userId, auth.businessId, auth.employeeId, auth.role);
+  return { ...tokens, session: await getSession(auth.userId, auth.businessId) };
 }

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
 import { requirePermission } from "../middleware/requireRole";
+import { requireFeature } from "../middleware/subscription";
 import {
   assigneesHandler,
   createHandler,
@@ -15,7 +16,7 @@ import {
 
 const router = Router();
 
-router.use(requireAuth, businessRateLimit);
+router.use(requireAuth, businessRateLimit, requireFeature("tasks"));
 // Every employee: their own tasks (the service checks scope=all against tasks.manage).
 router.get("/", listHandler);
 router.get("/notifications", notificationsHandler);

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, UserCog } from "lucide-react";
+import { KeyRound, Plus, Trash2, UserCog } from "lucide-react";
+import { ResetPasswordModal } from "./ResetPasswordModal";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { SkeletonRows } from "../../components/ui/Skeleton";
 import { Badge } from "../../components/ui/Badge";
@@ -25,6 +26,8 @@ export default function Employees() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [resetTarget, setResetTarget] = useState<Employee | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const canManage = can("employees.manage");
   const { locations, multiple } = useLocations();
@@ -62,6 +65,20 @@ export default function Employees() {
       showToast({ variant: "error", title: t("common.saveFailed"), message: extractErrorMessage(error) });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleResetPassword(password: string) {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      await employeeService.resetEmployeePassword(resetTarget.id, password);
+      showToast({ variant: "success", title: t("employees.resetPassword.done"), message: t("employees.resetPassword.doneMessage", { name: resetTarget.name }) });
+      setResetTarget(null);
+    } catch (error) {
+      showToast({ variant: "error", title: t("common.saveFailed"), message: extractErrorMessage(error) });
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -190,9 +207,14 @@ export default function Employees() {
                     <td className="text-muted">{e.lastLoginAt ? formatDateTime(e.lastLoginAt) : t("employees.neverLoggedIn")}</td>
                     <td>
                       {canManage && e.role !== "OWNER" && (
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setDeleteTarget(e)}>
-                          <Trash2 size={16} color="var(--color-danger-text)" />
-                        </button>
+                        <div className="table-actions">
+                          <button className="btn btn-ghost btn-icon btn-sm" title={t("employees.resetPassword.title")} onClick={() => setResetTarget(e)}>
+                            <KeyRound size={16} />
+                          </button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setDeleteTarget(e)}>
+                            <Trash2 size={16} color="var(--color-danger-text)" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -214,6 +236,7 @@ export default function Employees() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+      <ResetPasswordModal employee={resetTarget} submitting={resetting} onClose={() => setResetTarget(null)} onSubmit={handleResetPassword} />
     </div>
   );
 }

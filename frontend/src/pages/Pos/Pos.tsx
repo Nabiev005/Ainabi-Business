@@ -232,6 +232,8 @@ export default function Pos() {
   const business = session?.business;
   const { locations, current: myLocation, multiple } = useLocations();
   const canPickLocation = multiple && sessionCan(session, "stock.adjust");
+  // Sellers are capped at the owner's discount limit; owner/manager aren't.
+  const discountLimitPercent = sessionCan(session, "discounts.unlimited") ? null : (session?.business.maxDiscountPercent ?? 10);
 
   const [locationId, setLocationId] = useState("");
   const [products, setProducts] = useState<Product[] | null>(null);
@@ -444,7 +446,10 @@ export default function Pos() {
     () => Math.round(cart.reduce((sum, line) => sum + linePrice(line, priceLevel) * line.quantity, 0) * 100) / 100,
     [cart, priceLevel],
   );
-  const total = Math.max(0, subtotal - discount);
+  const maxDiscount = discountLimitPercent === null ? subtotal : Math.floor((subtotal * discountLimitPercent) / 100);
+  // The cart can shrink after a discount was typed — never send more than allowed.
+  const appliedDiscount = Math.min(discount, maxDiscount);
+  const total = Math.max(0, subtotal - appliedDiscount);
   const change = paymentMethod === "CASH" && cashGiven !== "" ? Number(cashGiven) - total : null;
   const needsPrescription = !!business?.checkPrescription && cart.some((l) => l.product.prescriptionRequired);
   const hasWholesale = cart.some((l) => l.product.wholesalePrice !== null) || selectedCustomer?.isWholesale;
@@ -486,7 +491,7 @@ export default function Pos() {
           packageId: line.packageId,
           ...(line.product.requiresSerial ? { serialNumbers: line.serials.slice(0, line.quantity).map((s) => s.trim()) } : {}),
         })),
-        discount,
+        discount: appliedDiscount,
         paymentMethod,
         customerId: customerId || undefined,
         locationId: locationId || undefined,
@@ -721,9 +726,20 @@ export default function Pos() {
               style={{ width: 120, height: 32, textAlign: "right" }}
               value={discount || ""}
               placeholder="0"
-              onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+              onChange={(e) => {
+                const value = Number(e.target.value) || 0;
+                if (discountLimitPercent !== null && value > maxDiscount) {
+                  showToast({ variant: "error", title: t("pos.discountLimitTitle"), message: t("pos.discountLimit", { percent: discountLimitPercent, amount: formatMoney(maxDiscount) }) });
+                }
+                setDiscount(Math.min(value, maxDiscount));
+              }}
             />
           </div>
+          {discountLimitPercent !== null && subtotal > 0 && (
+            <div className="field-hint" style={{ textAlign: "right" }}>
+              {t("pos.discountLimitHint", { percent: discountLimitPercent, amount: formatMoney(maxDiscount) })}
+            </div>
+          )}
           <div className="pos-summary-total">
             <span>{t("pos.summary.total")}</span>
             <span className="mono-num">{formatMoney(total)}</span>

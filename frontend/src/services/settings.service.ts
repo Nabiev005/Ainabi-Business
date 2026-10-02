@@ -12,6 +12,7 @@ export async function updateBusiness(payload: {
   address?: string | null;
   currency: string;
   qrPaymentInfo?: string | null;
+  maxDiscountPercent?: number;
 }): Promise<Business> {
   const { data } = await api.put<Business>("/settings/business", payload);
   return data;

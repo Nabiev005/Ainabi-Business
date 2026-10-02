@@ -40,6 +40,11 @@ export async function refresh(): Promise<AuthResponse> {
   return data;
 }
 
+export async function changePassword(payload: { currentPassword?: string; newPassword: string }): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>("/auth/change-password", payload);
+  return data;
+}
+
 export async function fetchSession(): Promise<Session> {
   const { data } = await api.get<Session>("/auth/me");
   return data;

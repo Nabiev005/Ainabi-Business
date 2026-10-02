@@ -53,6 +53,18 @@ export const env = {
     clientId: (process.env.GOOGLE_CLIENT_ID ?? "").trim(),
   },
   refreshCookieName: "ainabi_refresh_token",
+  // Platform owner(s) — can see every business and extend subscriptions
+  // after a payment. Comma-separated emails of existing accounts.
+  platformAdminEmails: (process.env.PLATFORM_ADMIN_EMAILS || "ajbeknabiev90@gmail.com")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+  // Shown on the billing page: where customers send the subscription fee
+  // (e.g. "MBank QR / +996 700 000 000, Айбек Н.").
+  platformPaymentInfo: (process.env.PLATFORM_PAYMENT_INFO || "O!Деньги / MBank: +996 702 952 200 (Айбек Н.)").trim(),
+  // Payment QR shown on the billing page (a file in frontend/public, or a full URL).
+  platformPaymentQr: (process.env.PLATFORM_PAYMENT_QR || "/payment-qr.jpg").trim(),
+  platformSupportWhatsapp: (process.env.PLATFORM_SUPPORT_WHATSAPP ?? "996702952200").trim(),
   // Set to "true" when the frontend and backend live on different domains
   // (e.g. Vercel frontend + Railway backend) — browsers only send a
   // same-site cookie ("Lax") on same-origin requests, so a cross-domain

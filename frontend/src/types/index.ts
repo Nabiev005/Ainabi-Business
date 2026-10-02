@@ -11,6 +11,7 @@ export type Permission =
   | "pos.sell"
   | "sales.view"
   | "sales.return"
+  | "discounts.unlimited"
   | "shifts.use"
   | "shifts.viewAll"
   | "repairs.manage"
@@ -60,6 +61,10 @@ export interface User {
   phone: string | null;
   avatarUrl: string | null;
   provider: AuthProvider;
+  /** false for a Google-only account that never set a password. */
+  hasPassword?: boolean;
+  /** The owner chose this password — the person must set their own first. */
+  mustChangePassword?: boolean;
 }
 
 export type ProductFieldType = "text" | "number" | "select" | "boolean" | "date";
@@ -108,6 +113,8 @@ export interface Business {
   phone?: string | null;
   address?: string | null;
   qrPaymentInfo?: string | null;
+  /** Max discount (% of the receipt) a seller may give; owner/manager are unlimited. */
+  maxDiscountPercent?: number;
   businessType?: string;
   productFields?: ProductFieldDef[];
   trackSerials?: boolean;
@@ -124,6 +131,9 @@ export interface Session {
   business: Business;
   role: Role;
   permissions: Permission[];
+  subscription?: import("../services/billing.service").SubscriptionInfo;
+  /** Platform owner — sees the Platform panel, never locked out. */
+  isPlatformAdmin?: boolean;
   employeeId: string;
   /** The employee's own branch (null = the default one). */
   locationId?: string | null;

@@ -19,6 +19,13 @@ export const googleAuthSchema = z.object({
   idToken: z.string().min(10, "Google token жараксыз"),
 });
 
+export const changePasswordSchema = z.object({
+  // Not needed for a Google-only account setting its first password.
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(8, "Пароль эң аз дегенде 8 белгиден турушу керек").max(200),
+});
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;

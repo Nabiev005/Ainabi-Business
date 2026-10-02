@@ -6,6 +6,8 @@ import { ToastProvider } from "./contexts/ToastContext";
 import { ToastStack } from "./components/ui/ToastStack";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RequirePermission } from "./components/RequirePermission";
+import { RequireFeature } from "./components/RequireFeature";
+import { RequirePlatformAdmin } from "./components/RequirePlatformAdmin";
 import { AppLayout } from "./layouts/AppLayout";
 
 const Landing = lazy(() => import("./pages/Landing/Landing"));
@@ -37,6 +39,8 @@ const Shifts = lazy(() => import("./pages/Shifts/Shifts"));
 const Tasks = lazy(() => import("./pages/Tasks/Tasks"));
 const Pipeline = lazy(() => import("./pages/Pipeline/Pipeline"));
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
+const Billing = lazy(() => import("./pages/Billing/Billing"));
+const Platform = lazy(() => import("./pages/Platform/Platform"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
 function PageFallback() {
@@ -65,15 +69,15 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<RequirePermission permission="reports.view"><Dashboard /></RequirePermission>} />
-                  <Route path="/analytics" element={<RequirePermission permission="analytics.view"><Analytics /></RequirePermission>} />
-                  <Route path="/tasks" element={<Tasks />} />
-                  <Route path="/pipeline" element={<RequirePermission permission="pipeline.view"><Pipeline /></RequirePermission>} />
+                  <Route path="/analytics" element={<RequirePermission permission="analytics.view"><RequireFeature feature="analytics"><Analytics /></RequireFeature></RequirePermission>} />
+                  <Route path="/tasks" element={<RequireFeature feature="tasks"><Tasks /></RequireFeature>} />
+                  <Route path="/pipeline" element={<RequirePermission permission="pipeline.view"><RequireFeature feature="pipeline"><Pipeline /></RequireFeature></RequirePermission>} />
                   <Route path="/pos" element={<RequirePermission permission="pos.sell"><Pos /></RequirePermission>} />
                   <Route path="/sales" element={<RequirePermission permission="sales.view"><Sales /></RequirePermission>} />
                   <Route path="/shifts" element={<RequirePermission permission={["shifts.use", "shifts.viewAll"]}><Shifts /></RequirePermission>} />
-                  <Route path="/repairs" element={<RequirePermission permission="repairs.manage"><Repairs /></RequirePermission>} />
-                  <Route path="/receiving" element={<RequirePermission permission="stock.receive"><Receiving /></RequirePermission>} />
-                  <Route path="/inventory" element={<RequirePermission permission="stock.inventory"><Inventory /></RequirePermission>} />
+                  <Route path="/repairs" element={<RequirePermission permission="repairs.manage"><RequireFeature feature="repairs"><Repairs /></RequireFeature></RequirePermission>} />
+                  <Route path="/receiving" element={<RequirePermission permission="stock.receive"><RequireFeature feature="receiving"><Receiving /></RequireFeature></RequirePermission>} />
+                  <Route path="/inventory" element={<RequirePermission permission="stock.inventory"><RequireFeature feature="inventory"><Inventory /></RequireFeature></RequirePermission>} />
                   <Route path="/labels" element={<RequirePermission permission="labels.print"><Labels /></RequirePermission>} />
                   <Route path="/products" element={<RequirePermission permission="products.view"><Products /></RequirePermission>} />
                   <Route path="/stock" element={<RequirePermission permission="stock.view"><Stock /></RequirePermission>} />
@@ -86,6 +90,8 @@ export default function App() {
                   <Route path="/reports" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
                   <Route path="/employees" element={<RequirePermission permission="employees.manage"><Employees /></RequirePermission>} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/billing" element={<RequirePermission permission="settings.business"><Billing /></RequirePermission>} />
+                  <Route path="/platform" element={<RequirePlatformAdmin><Platform /></RequirePlatformAdmin>} />
                   <Route path="/support" element={<Support />} />
                 </Route>
               </Route>
