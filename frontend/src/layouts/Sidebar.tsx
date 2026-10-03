@@ -26,6 +26,9 @@ import {
   Lock,
   Gem,
   Building2,
+  Lightbulb,
+  Undo2,
+  Hourglass,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { sessionCan } from "../hooks/usePermissions";
@@ -41,6 +44,7 @@ const locked = (s: Session, feature?: Feature) => !!feature && !s.isPlatformAdmi
 const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; end?: boolean; show: (s: Session) => boolean; feature?: Feature }> = [
   { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, end: true, show: (s) => can(s, "reports.view") },
   { to: "/analytics", key: "analytics", icon: ChartPie, show: (s) => can(s, "analytics.view"), feature: "analytics" },
+  { to: "/insights", key: "insights", icon: Lightbulb, show: (s) => can(s, "analytics.view"), feature: "analytics" },
   { to: "/tasks", key: "tasks", icon: ListTodo, show: () => true, feature: "tasks" },
   { to: "/pos", key: "pos", icon: ShoppingCart, show: (s) => can(s, "pos.sell") },
   { to: "/sales", key: "sales", icon: ScrollText, show: (s) => can(s, "sales.view") },
@@ -49,6 +53,8 @@ const NAV_ITEMS: Array<{ to: string; key: string; icon: typeof LayoutDashboard; 
   { to: "/products", key: "products", icon: Package, show: (s) => can(s, "products.view") },
   { to: "/pipeline", key: "pipeline", icon: SquareKanban, show: (s) => can(s, "pipeline.view"), feature: "pipeline" },
   { to: "/stock", key: "stock", icon: Warehouse, show: (s) => can(s, "stock.view") },
+  { to: "/stale", key: "stale", icon: Hourglass, show: (s) => can(s, "stock.stale") },
+  { to: "/returns", key: "returns", icon: Undo2, show: (s) => can(s, "returns.view") },
   { to: "/receiving", key: "receiving", icon: PackagePlus, show: (s) => can(s, "stock.receive"), feature: "receiving" },
   { to: "/inventory", key: "inventory", icon: ClipboardCheck, show: (s) => can(s, "stock.inventory"), feature: "inventory" },
   { to: "/customers", key: "customers", icon: Users, show: (s) => can(s, "customers.view") },

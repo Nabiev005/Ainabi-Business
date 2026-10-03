@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Bell, ClipboardList, PackageX, Wallet } from "lucide-react";
+import { AlertTriangle, Bell, ClipboardList, Lightbulb, PackageX, Wallet } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { sessionCan } from "../hooks/usePermissions";
 import * as dashboardService from "../services/dashboard.service";
 import * as debtService from "../services/debt.service";
 import * as supplierService from "../services/supplier.service";
@@ -33,6 +35,10 @@ export function NotificationCenter() {
   // Last unseen count we knew about — a rise means a task just arrived.
   const knownUnseen = useRef<number | null>(null);
   const { showToast } = useToast();
+  const { session } = useAuth();
+  // First week of the month: last month's report + advice is waiting.
+  const reportReady =
+    new Date().getDate() <= 7 && sessionCan(session, "analytics.view") && (!!session?.isPlatformAdmin || !!session?.subscription?.features.includes("analytics"));
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +81,16 @@ export function NotificationCenter() {
   }, []);
 
   const items: NotificationItem[] = [];
+  if (reportReady) {
+    items.push({
+      id: "monthly-report",
+      icon: Lightbulb,
+      title: t("header.reportReady"),
+      subtitle: t("header.reportReadySubtitle"),
+      to: "/insights",
+      variant: "info",
+    });
+  }
   if (tasks.length > 0) {
     items.push({
       id: "tasks",

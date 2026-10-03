@@ -1,0 +1,76 @@
+.insights-month {
+  text-transform: capitalize;
+}
+
+.insight-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.insight {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  border-left: 3px solid transparent;
+  font-size: var(--font-size-sm);
+}
+
+.insight-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.insight-danger {
+  border-left-color: var(--color-danger-text);
+}
+.insight-danger .insight-icon {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.insight-warning {
+  border-left-color: var(--color-warning-text);
+}
+.insight-warning .insight-icon {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.insight-success {
+  border-left-color: var(--color-success-text);
+}
+.insight-success .insight-icon {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.insight-info {
+  border-left-color: var(--color-info-text);
+}
+.insight-info .insight-icon {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.insight-text {
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.insight-action {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .insight {
+    padding: var(--space-4);
+  }
+}

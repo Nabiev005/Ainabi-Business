@@ -39,6 +39,9 @@ const Shifts = lazy(() => import("./pages/Shifts/Shifts"));
 const Tasks = lazy(() => import("./pages/Tasks/Tasks"));
 const Pipeline = lazy(() => import("./pages/Pipeline/Pipeline"));
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
+const Insights = lazy(() => import("./pages/Insights/Insights"));
+const Returns = lazy(() => import("./pages/Returns/Returns"));
+const Stale = lazy(() => import("./pages/Stale/Stale"));
 const Billing = lazy(() => import("./pages/Billing/Billing"));
 const Platform = lazy(() => import("./pages/Platform/Platform"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
@@ -90,6 +93,9 @@ export default function App() {
                   <Route path="/reports" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
                   <Route path="/employees" element={<RequirePermission permission="employees.manage"><Employees /></RequirePermission>} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/insights" element={<RequirePermission permission="analytics.view"><RequireFeature feature="analytics"><Insights /></RequireFeature></RequirePermission>} />
+                  <Route path="/returns" element={<RequirePermission permission="returns.view"><Returns /></RequirePermission>} />
+                  <Route path="/stale" element={<RequirePermission permission="stock.stale"><Stale /></RequirePermission>} />
                   <Route path="/billing" element={<RequirePermission permission="settings.business"><Billing /></RequirePermission>} />
                   <Route path="/platform" element={<RequirePlatformAdmin><Platform /></RequirePlatformAdmin>} />
                   <Route path="/support" element={<Support />} />

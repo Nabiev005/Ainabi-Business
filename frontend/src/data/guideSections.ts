@@ -1,7 +1,14 @@
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
+  ChartPie,
   ClipboardCheck,
+  Gem,
+  Hourglass,
+  Lightbulb,
+  ListTodo,
+  SquareKanban,
+  Undo2,
   Coins,
   LayoutDashboard,
   MapPin,
@@ -45,6 +52,13 @@ const GUIDE_KEYS = [
   { key: "expenses", icon: Receipt },
   { key: "reports", icon: BarChart3 },
   { key: "employees", icon: UserCog },
+  { key: "tasks", icon: ListTodo },
+  { key: "pipeline", icon: SquareKanban },
+  { key: "analytics", icon: ChartPie },
+  { key: "insights", icon: Lightbulb },
+  { key: "returns", icon: Undo2 },
+  { key: "stale", icon: Hourglass },
+  { key: "billing", icon: Gem },
 ] as const;
 
 /**

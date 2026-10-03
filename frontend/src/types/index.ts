@@ -11,6 +11,8 @@ export type Permission =
   | "pos.sell"
   | "sales.view"
   | "sales.return"
+  | "returns.view"
+  | "stock.stale"
   | "discounts.unlimited"
   | "shifts.use"
   | "shifts.viewAll"
