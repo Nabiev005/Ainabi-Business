@@ -17,7 +17,7 @@ function percentChange(current: number, previous: number): number | null {
 
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
-async function profitAndLoss(businessId: string, start: Date, end: Date) {
+export async function profitAndLoss(businessId: string, start: Date, end: Date) {
   const range = { gte: start, lte: end };
   const [sales, returns, expenses, repairs, writeOffs, counts] = await Promise.all([
     prisma.sale.findMany({

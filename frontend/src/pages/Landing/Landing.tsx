@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,15 +7,21 @@ import {
   BarChart3,
   CalendarClock,
   Car,
+  ChartPie,
+  Check,
   CheckCircle2,
   ClipboardCheck,
   Coins,
   FileSpreadsheet,
   Hammer,
+  Hourglass,
   Instagram,
   Laptop,
   Layers,
   LayoutDashboard,
+  Lightbulb,
+  ListTodo,
+  Minus,
   MessageCircle,
   Package,
   PackagePlus,
@@ -26,10 +33,12 @@ import {
   ShoppingCart,
   Smartphone,
   Sparkles,
+  SquareKanban,
   Store,
   Tag,
   Tv,
   Undo2,
+  UserCog,
   UserPlus,
   Users,
   Wallet,
@@ -43,6 +52,9 @@ import { useAuth } from "../../hooks/useAuth";
 import { GuideAccordion } from "../../components/GuideAccordion";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useGuideSections } from "../../data/guideSections";
+import * as billingService from "../../services/billing.service";
+import type { Feature as PlanFeature, PlanDefinition } from "../../services/billing.service";
+import { formatMoney } from "../../utils/format";
 import "./Landing.css";
 
 interface Problem { before: string; after: string }
@@ -80,7 +92,17 @@ const CAPABILITY_ICONS: LucideIcon[] = [
   Tag,
   FileSpreadsheet,
   Scale,
+  // added with roles / tasks / pipeline / advice
+  UserCog,
+  ListTodo,
+  SquareKanban,
+  ChartPie,
+  Lightbulb,
+  Hourglass,
 ];
+
+/** Paid modules in the order the price cards list them. */
+const PLAN_FEATURES: PlanFeature[] = ["receiving", "inventory", "repairs", "tasks", "pipeline", "analytics"];
 
 export default function Landing() {
   const { t } = useTranslation();
@@ -94,6 +116,20 @@ export default function Landing() {
   const dailyUse = t("landing.daily.items", { returnObjects: true }) as DailyItem[];
   const industryTexts = t("landing.industries.items", { returnObjects: true }) as Record<string, string>;
   const capabilities = t("landing.capabilities.items", { returnObjects: true }) as Feature[];
+  const [plans, setPlans] = useState<PlanDefinition[] | null>(null);
+  const [trialDays, setTrialDays] = useState(14);
+
+  // Prices come from the server's plan list, so the landing page never drifts from billing.
+  useEffect(() => {
+    billingService
+      .getPublicPlans()
+      .then((res) => {
+        setPlans(res.plans);
+        setTrialDays(res.trialDays);
+      })
+      .catch(() => setPlans([]));
+  }, []);
+  const limit = (n: number | null) => (n === null ? t("billing.unlimited") : String(n));
 
   // Already signed in — no reason to see the marketing page every visit.
   if (!isLoading && session) {
@@ -109,6 +145,9 @@ export default function Landing() {
         </div>
         <div className="landing-nav-actions">
           <LanguageSwitcher />
+          <a className="btn btn-ghost landing-nav-pricing" href="#pricing">
+            {t("landing.nav.pricing")}
+          </a>
           <button className="btn btn-ghost" onClick={() => navigate("/login")}>
             {t("landing.nav.login")}
           </button>
@@ -236,6 +275,54 @@ export default function Landing() {
           })}
         </div>
       </section>
+
+      {plans && plans.length > 0 && (
+        <section className="landing-section" id="pricing">
+          <div className="landing-section-header">
+            <h2 className="landing-section-title">{t("landing.pricing.title")}</h2>
+            <p className="landing-section-subtitle">{t("landing.pricing.subtitle", { days: trialDays })}</p>
+          </div>
+          <div className="landing-pricing">
+            {plans.map((p) => (
+              <div key={p.id} className={`landing-plan ${p.id === "PRO" ? "landing-plan-featured" : ""}`}>
+                {p.id === "PRO" && <span className="landing-plan-badge">{t("landing.pricing.popular")}</span>}
+                <h3>{t(`billing.plans.${p.id}.name`)}</h3>
+                <p className="landing-plan-for">{t(`billing.plans.${p.id}.for`)}</p>
+                <div className="landing-plan-price">
+                  <strong>{formatMoney(p.priceMonthly)}</strong>
+                  <span>/ {t("billing.month")}</span>
+                </div>
+                <p className="landing-plan-yearly">{t("landing.pricing.yearly", { amount: formatMoney(p.priceYearly) })}</p>
+                <ul>
+                  <li>
+                    <Check size={15} /> {t("billing.coreFeatures")}
+                  </li>
+                  <li>
+                    <Check size={15} /> {t("billing.employeesLimit", { limit: limit(p.maxEmployees) })}
+                  </li>
+                  <li>
+                    <Check size={15} /> {t("billing.locationsLimit", { limit: limit(p.maxLocations) })}
+                  </li>
+                  {PLAN_FEATURES.map((f) => (
+                    <li key={f} className={p.features.includes(f) ? "" : "landing-plan-missing"}>
+                      {p.features.includes(f) ? <Check size={15} /> : <Minus size={15} />} {t(`billing.features.${f}`)}
+                    </li>
+                  ))}
+                  {p.id === "MAX" && (
+                    <li>
+                      <Check size={15} /> {t("billing.prioritySupport")}
+                    </li>
+                  )}
+                </ul>
+                <button className={`btn ${p.id === "PRO" ? "btn-primary" : "btn-secondary"}`} onClick={() => navigate("/register")}>
+                  {t("landing.pricing.cta", { days: trialDays })}
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="landing-pricing-note">{t("landing.pricing.note", { days: trialDays })}</p>
+        </section>
+      )}
 
       <section className="landing-section">
         <div className="landing-section-header">

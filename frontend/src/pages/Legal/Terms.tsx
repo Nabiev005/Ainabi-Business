@@ -50,6 +50,9 @@ export default function Terms() {
         <h2>{t("legal.terms.s6Title")}</h2>
         <p>{t("legal.terms.s6Text")}</p>
 
+        <h2>{t("legal.terms.billingTitle")}</h2>
+        <p>{t("legal.terms.billingText")}</p>
+
         <h2>{t("legal.terms.s7Title")}</h2>
         <p>
           <Trans

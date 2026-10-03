@@ -28,6 +28,8 @@ export const PERMISSIONS = {
   "pos.sell": ["OWNER", "ADMIN", "CASHIER"],
   "sales.view": ["OWNER", "ADMIN", "ACCOUNTANT", "CASHIER"],
   "sales.return": MANAGEMENT,
+  // The returns journal (what came back, why, how much was refunded).
+  "returns.view": ["OWNER", "ACCOUNTANT", "REGISTRAR"],
   // Everyone else is capped at Business.maxDiscountPercent per receipt.
   "discounts.unlimited": MANAGEMENT,
 
@@ -45,6 +47,8 @@ export const PERMISSIONS = {
   "stock.view": ["OWNER", "ADMIN", "ACCOUNTANT", "REGISTRAR"],
   // Manual in/out, write-offs, transfers between branches.
   "stock.adjust": MANAGEMENT,
+  // Slow movers: the seller sees what to push, the owner also sees the money tied up.
+  "stock.stale": ["OWNER", "CASHIER"],
   "stock.receive": ["OWNER", "ADMIN", "REGISTRAR"],
   "stock.inventory": ["OWNER", "ADMIN", "REGISTRAR"],
   "labels.print": ["OWNER", "ADMIN", "REGISTRAR"],

@@ -52,6 +52,12 @@ export interface PlatformBusiness {
   subscription: SubscriptionInfo;
 }
 
+/** Public price list (landing page — no sign-in). */
+export async function getPublicPlans(): Promise<{ plans: PlanDefinition[]; trialDays: number; trialPlan: PlanId }> {
+  const { data } = await api.get<{ plans: PlanDefinition[]; trialDays: number; trialPlan: PlanId }>("/billing/plans");
+  return data;
+}
+
 export async function getBilling(): Promise<BillingData> {
   const { data } = await api.get<BillingData>("/billing");
   return data;
