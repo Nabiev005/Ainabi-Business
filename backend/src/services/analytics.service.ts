@@ -85,17 +85,10 @@ export async function profitAndLoss(businessId: string, start: Date, end: Date) 
   };
 }
 
-export async function buildAnalytics(businessId: string, query: ReportQuery) {
-  const { start, end } = resolvePreset(query.preset === "custom" ? undefined : query.preset, query.from, query.to);
-  const durationMs = end.getTime() - start.getTime();
-  const prevEnd = new Date(start.getTime() - 1);
-  const prevStart = new Date(prevEnd.getTime() - durationMs);
+type PnlRaw = Awaited<ReturnType<typeof profitAndLoss>>["raw"];
 
-  const [current, previous] = await Promise.all([profitAndLoss(businessId, start, end), profitAndLoss(businessId, prevStart, prevEnd)]);
-  const s = current.statement;
-  const p = previous.statement;
-
-  // ---- daily series: revenue, expenses and profit per day ----
+/** Revenue, expenses and profit per calendar day, every day of the range present. */
+function dailySeries(raw: PnlRaw, start: Date, end: Date) {
   const days = new Map<string, { revenue: number; cost: number; expenses: number; other: number }>();
   const day = (d: Date) => {
     const key = dayKey(d);
@@ -104,7 +97,6 @@ export async function buildAnalytics(businessId: string, query: ReportQuery) {
     return entry;
   };
   for (let d = new Date(start); d <= end && days.size < 400; d.setDate(d.getDate() + 1)) day(d);
-  const { raw } = current;
   for (const x of raw.sales) {
     day(x.createdAt).revenue += toNumber(x.total);
     day(x.createdAt).cost += toNumber(x.costTotal);
@@ -117,7 +109,7 @@ export async function buildAnalytics(businessId: string, query: ReportQuery) {
   for (const x of raw.repairs) if (x.deliveredAt) day(x.deliveredAt).other += toNumber(x.finalPrice);
   for (const x of raw.writeOffs) day(x.createdAt).other -= toNumber(x.quantity) * toNumber(x.product.purchasePrice);
   for (const x of raw.counts) day(x.createdAt).other -= toNumber(x.shortageValue) - toNumber(x.surplusValue);
-  const series = [...days.entries()]
+  return [...days.entries()]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([date, v]) => ({
       date,
@@ -125,6 +117,113 @@ export async function buildAnalytics(businessId: string, query: ReportQuery) {
       expenses: round2(v.expenses),
       profit: round2(v.revenue - v.cost + v.other - v.expenses),
     }));
+}
+
+/** With fewer finished days than this in the month, the pace comes from the last two weeks instead. */
+const MIN_MONTH_DAYS_FOR_PACE = 3;
+const RECENT_PACE_DAYS = 14;
+
+/**
+ * Where the current calendar month will land at today's pace, and how that
+ * compares with the owner's monthly revenue plan. Always about this month,
+ * whatever period the rest of the page shows.
+ *
+ * Pace = average revenue per finished day (today is still going, so it would
+ * drag the average down in the morning). Today counts as at least an average
+ * day; every day after it is assumed average.
+ */
+async function monthForecast(businessId: string) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const today = now.getDate();
+  const useRecent = today - 1 < MIN_MONTH_DAYS_FOR_PACE;
+  const recentStart = new Date(now.getFullYear(), now.getMonth(), today - RECENT_PACE_DAYS);
+  const rangeStart = useRecent ? recentStart : monthStart;
+
+  const [business, pnl] = await Promise.all([
+    prisma.business.findUnique({ where: { id: businessId }, select: { monthlyRevenuePlan: true } }),
+    profitAndLoss(businessId, rangeStart, now),
+  ]);
+  const days = dailySeries(pnl.raw, rangeStart, now);
+  const todayKey = dayKey(now);
+  const monthKey = dayKey(monthStart).slice(0, 7);
+  const monthDays = days.filter((d) => d.date.startsWith(monthKey));
+  const todayRow = monthDays.find((d) => d.date === todayKey) ?? { revenue: 0, profit: 0 };
+  const finished = monthDays.filter((d) => d.date < todayKey);
+  const paceDays = useRecent ? days.filter((d) => d.date < todayKey).slice(-RECENT_PACE_DAYS) : finished;
+  const sum = (rows: { revenue: number; profit: number }[], key: "revenue" | "profit") => rows.reduce((acc, d) => acc + d[key], 0);
+  const avg = (key: "revenue" | "profit") => (paceDays.length ? sum(paceDays, key) / paceDays.length : todayRow[key]);
+
+  const avgDaily = avg("revenue");
+  const avgProfit = avg("profit");
+  const daysAfterToday = daysInMonth - today;
+  const actual = sum(finished, "revenue") + todayRow.revenue;
+  const actualProfit = sum(finished, "profit") + todayRow.profit;
+  const todayRevenueEstimate = Math.max(todayRow.revenue, avgDaily);
+  const forecast = sum(finished, "revenue") + todayRevenueEstimate + avgDaily * daysAfterToday;
+  const forecastProfit = sum(finished, "profit") + Math.max(todayRow.profit, avgProfit) + avgProfit * daysAfterToday;
+
+  const plan = business?.monthlyRevenuePlan == null ? null : toNumber(business.monthlyRevenuePlan);
+  const percentOf = (value: number) => (plan ? Math.round((value / plan) * 1000) / 10 : null);
+
+  // Running total for the chart: actual up to today, then the projected path.
+  // Today carries both so the two lines meet.
+  const cumulative: { date: string; actual: number | null; forecast: number | null }[] = [];
+  let running = 0;
+  let projected = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = dayKey(new Date(now.getFullYear(), now.getMonth(), d));
+    if (d < today) {
+      running += monthDays.find((x) => x.date === date)?.revenue ?? 0;
+      cumulative.push({ date, actual: round2(running), forecast: null });
+    } else if (d === today) {
+      projected = running + todayRevenueEstimate;
+      running += todayRow.revenue;
+      cumulative.push({ date, actual: round2(running), forecast: round2(projected) });
+    } else {
+      projected += avgDaily;
+      cumulative.push({ date, actual: null, forecast: round2(projected) });
+    }
+  }
+
+  return {
+    month: monthKey,
+    plan,
+    daysInMonth,
+    daysElapsed: today,
+    basis: useRecent ? ("recent" as const) : ("month" as const),
+    actual: round2(actual),
+    actualProfit: round2(actualProfit),
+    avgDaily: round2(avgDaily),
+    forecast: round2(forecast),
+    forecastProfit: round2(forecastProfit),
+    actualPercent: percentOf(actual),
+    forecastPercent: percentOf(forecast),
+    // What each remaining day (today included) must bring to hit the plan.
+    neededPerDay: plan === null ? null : round2(Math.max(0, plan - actual) / (daysAfterToday + 1)),
+    cumulative,
+  };
+}
+
+export async function setMonthlyPlan(businessId: string, monthlyRevenuePlan: number | null) {
+  const business = await prisma.business.update({ where: { id: businessId }, data: { monthlyRevenuePlan }, select: { monthlyRevenuePlan: true } });
+  return { monthlyRevenuePlan: business.monthlyRevenuePlan == null ? null : toNumber(business.monthlyRevenuePlan) };
+}
+
+export async function buildAnalytics(businessId: string, query: ReportQuery) {
+  const { start, end } = resolvePreset(query.preset === "custom" ? undefined : query.preset, query.from, query.to);
+  const durationMs = end.getTime() - start.getTime();
+  const prevEnd = new Date(start.getTime() - 1);
+  const prevStart = new Date(prevEnd.getTime() - durationMs);
+
+  const [current, previous] = await Promise.all([profitAndLoss(businessId, start, end), profitAndLoss(businessId, prevStart, prevEnd)]);
+  const s = current.statement;
+  const p = previous.statement;
+
+  const { raw } = current;
+  const series = dailySeries(raw, start, end);
+  const forecast = await monthForecast(businessId);
 
   // ---- team ----
   const range = { gte: start, lte: end };
@@ -184,6 +283,7 @@ export async function buildAnalytics(businessId: string, query: ReportQuery) {
     },
     expensesByCategory: current.expensesByCategory,
     series,
+    forecast,
     team,
     tasks: {
       open: openTasks.length,

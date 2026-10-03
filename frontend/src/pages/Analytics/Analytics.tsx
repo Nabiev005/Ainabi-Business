@@ -1,29 +1,74 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ClipboardList, Receipt, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react";
-import { KpiCard } from "../../components/ui/KpiCard";
+import { ClipboardList, LucideIcon, Minus, Receipt, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Badge } from "../../components/ui/Badge";
 import { useToast } from "../../hooks/useToast";
 import { useLabels } from "../../hooks/useLabels";
+import { usePermissions } from "../../hooks/usePermissions";
 import * as analyticsService from "../../services/analytics.service";
 import type { AnalyticsData } from "../../services/analytics.service";
 import type { ReportPreset } from "../../services/report.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatDateTime, formatMoney, formatNumber } from "../../utils/format";
+import { Bar3D, Bar3DDefs, LOSS_COLOR, PALETTE, Pie3D, WEEKDAY_COLORS, weekdayIndex } from "./Charts3D";
+import { ForecastCard } from "./ForecastCard";
 import "./Analytics.css";
 
 const PRESET_ORDER: ReportPreset[] = ["today", "yesterday", "7d", "30d", "month", "prevMonth", "custom"];
 
-/** KpiCard only takes a number; "nothing to compare with" shows no trend. */
-const change = (value: number | null) => (value === null ? undefined : value);
+const EXPENSE_CATEGORY_ORDER = ["RENT", "SALARY", "PURCHASE", "TRANSPORT", "UTILITIES", "ADVERTISING", "OTHER"];
+
+interface StatTileProps {
+  label: string;
+  value: string;
+  /** null = nothing to compare with — no trend shown. */
+  change: number | null;
+  icon: LucideIcon;
+  tone: "blue" | "green" | "orange" | "violet" | "red";
+  index: number;
+}
+
+/** Bright gradient KPI tile with a small 3D bar cluster in the corner. */
+function StatTile({ label, value, change, icon: Icon, tone, index }: StatTileProps) {
+  const { t } = useTranslation();
+  const TrendIcon = change === null || change === 0 ? Minus : change > 0 ? TrendingUp : TrendingDown;
+  return (
+    <div className={`stat-tile stat-tile-${tone} animate-in`} style={{ animationDelay: `${index * 60}ms` }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+        <span className="stat-tile-label">{label}</span>
+        <span className="stat-tile-icon">
+          <Icon size={18} />
+        </span>
+      </div>
+      <span className="stat-tile-value mono-num">{value}</span>
+      {change !== null && (
+        <span className="stat-tile-trend">
+          <TrendIcon size={13} />
+          {change > 0 ? "+" : ""}
+          {change}% {t("common.kpiTrendSuffix")}
+        </span>
+      )}
+      <svg className="stat-tile-deco" viewBox="0 0 72 48" aria-hidden="true">
+        {[14, 26, 20, 38].map((h, i) => (
+          <g key={i} transform={`translate(${i * 17} 0)`}>
+            <path d={`M10,${46 - h} l5,-4 v${h} l-5,4 z`} fill="rgba(0,0,0,0.18)" />
+            <path d={`M0,${46 - h} l5,-4 h10 l-5,4 z`} fill="rgba(255,255,255,0.55)" />
+            <rect x={0} y={46 - h} width={10} height={h} fill="rgba(255,255,255,0.32)" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const labels = useLabels();
+  const { can } = usePermissions();
   const [preset, setPreset] = useState<ReportPreset>("month");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -40,7 +85,17 @@ export default function Analytics() {
 
   const s = data?.statement;
   const loss = !!s && s.netProfit < 0;
-  const maxExpense = Math.max(1, ...(data?.expensesByCategory.map((e) => e.amount) ?? [1]));
+  const weekdaysShort = t("analytics.weekdaysShort", { returnObjects: true }) as string[];
+  const expenseSlices = (data?.expensesByCategory ?? []).map((e) => {
+    const order = EXPENSE_CATEGORY_ORDER.indexOf(e.category);
+    return {
+      key: e.category,
+      label: labels.expenseCategory[e.category] ?? e.category,
+      value: e.amount,
+      display: formatMoney(e.amount),
+      color: PALETTE[order === -1 ? PALETTE.length - 1 : order],
+    };
+  });
 
   return (
     <div className="stack gap-6">
@@ -75,26 +130,45 @@ export default function Analytics() {
           <EmptyState title={t("reports.selectRange")} subtitle={t("reports.selectRangeSubtitle")} />
         </div>
       ) : !data || !s ? (
-        <div className="kpi-grid">
+        <div className="stat-tile-grid">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} height={132} radius="16px" />
+            <Skeleton key={i} height={140} radius="20px" />
           ))}
         </div>
       ) : (
         <>
-          <div className="kpi-grid">
-            <KpiCard index={0} label={t("analytics.kpi.revenue")} value={formatMoney(s.revenue)} changePercent={change(data.changes.revenue)} icon={TrendingUp} accent="primary" />
-            <KpiCard index={1} label={t("analytics.kpi.grossProfit")} value={formatMoney(s.grossProfit)} changePercent={change(data.changes.grossProfit)} icon={ShoppingBag} accent="success" />
-            <KpiCard index={2} label={t("analytics.kpi.expenses")} value={formatMoney(s.expenses)} changePercent={change(data.changes.expenses)} icon={Receipt} accent="warning" />
-            <KpiCard
+          <div className="stat-tile-grid">
+            <StatTile index={0} tone="blue" label={t("analytics.kpi.revenue")} value={formatMoney(s.revenue)} change={data.changes.revenue} icon={TrendingUp} />
+            <StatTile index={1} tone="green" label={t("analytics.kpi.grossProfit")} value={formatMoney(s.grossProfit)} change={data.changes.grossProfit} icon={ShoppingBag} />
+            <StatTile index={2} tone="orange" label={t("analytics.kpi.expenses")} value={formatMoney(s.expenses)} change={data.changes.expenses} icon={Receipt} />
+            <StatTile
               index={3}
+              tone={loss ? "red" : "violet"}
               label={loss ? t("analytics.kpi.netLoss") : t("analytics.kpi.netProfit")}
               value={formatMoney(s.netProfit)}
-              changePercent={change(data.changes.netProfit)}
+              change={data.changes.netProfit}
               icon={loss ? TrendingDown : Wallet}
-              accent={loss ? "danger" : "success"}
             />
           </div>
+
+          <ForecastCard
+            forecast={data.forecast}
+            canEditPlan={can("settings.business")}
+            onPlanChange={(plan) =>
+              setData((d) =>
+                d && {
+                  ...d,
+                  forecast: {
+                    ...d.forecast,
+                    plan,
+                    actualPercent: plan ? Math.round((d.forecast.actual / plan) * 1000) / 10 : null,
+                    forecastPercent: plan ? Math.round((d.forecast.forecast / plan) * 1000) / 10 : null,
+                    neededPerDay: plan ? Math.round((Math.max(0, plan - d.forecast.actual) / (d.forecast.daysInMonth - d.forecast.daysElapsed + 1)) * 100) / 100 : null,
+                  },
+                },
+              )
+            }
+          />
 
           <div className="analytics-grid">
             {/* Profit & loss statement */}
@@ -176,11 +250,13 @@ export default function Analytics() {
               <div className="card-header">
                 <h2 className="card-title">{t("analytics.dailyTitle")}</h2>
                 <div className="analytics-legend">
+                  {weekdaysShort.map((name, i) => (
+                    <span key={name}>
+                      <i style={{ background: WEEKDAY_COLORS[i] }} /> {name}
+                    </span>
+                  ))}
                   <span>
-                    <i style={{ background: "var(--color-success-text)" }} /> {t("analytics.legendProfit")}
-                  </span>
-                  <span>
-                    <i style={{ background: "var(--color-danger-text)" }} /> {t("analytics.legendLoss")}
+                    <i style={{ background: LOSS_COLOR }} /> {t("analytics.legendLoss")}
                   </span>
                 </div>
               </div>
@@ -189,7 +265,8 @@ export default function Analytics() {
                   <EmptyState title={t("reports.noData")} subtitle={t("reports.noDataSubtitle")} />
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={data.series} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                    <BarChart data={data.series} margin={{ top: 16, right: 12, left: -8, bottom: 0 }} barCategoryGap="18%">
+                      <Bar3DDefs />
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                       <XAxis dataKey="date" tickFormatter={(v) => formatDate(v)} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--color-text-muted)" }} minTickGap={16} />
                       <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "var(--color-text-muted)" }} width={64} tickFormatter={(v) => formatNumber(v)} />
@@ -200,9 +277,9 @@ export default function Analytics() {
                         formatter={(value: number, name: string) => [formatMoney(value), t(`analytics.series.${name}`)]}
                         contentStyle={{ borderRadius: 12, border: "1px solid var(--color-border)" }}
                       />
-                      <Bar dataKey="profit" radius={[4, 4, 4, 4]} maxBarSize={28}>
+                      <Bar dataKey="profit" maxBarSize={34} shape={<Bar3D />}>
                         {data.series.map((d) => (
-                          <Cell key={d.date} fill={d.profit < 0 ? "var(--color-danger-text)" : "var(--color-success-text)"} />
+                          <Cell key={d.date} fill={d.profit < 0 ? LOSS_COLOR : WEEKDAY_COLORS[weekdayIndex(d.date)]} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -289,16 +366,8 @@ export default function Analytics() {
               <div className="card-header">
                 <h2 className="card-title">{t("analytics.expensesTitle")}</h2>
               </div>
-              <div className="card-pad stack gap-3">
-                {data.expensesByCategory.map((e) => (
-                  <div key={e.category} className="expense-bar-row">
-                    <span className="expense-bar-label">{labels.expenseCategory[e.category] ?? e.category}</span>
-                    <div className="expense-bar-track">
-                      <div className="expense-bar-fill" style={{ width: `${(e.amount / maxExpense) * 100}%` }} />
-                    </div>
-                    <span className="expense-bar-value">{formatMoney(e.amount)}</span>
-                  </div>
-                ))}
+              <div className="card-pad">
+                <Pie3D slices={expenseSlices} ariaLabel={t("analytics.expensesTitle")} />
               </div>
             </div>
           )}

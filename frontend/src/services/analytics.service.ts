@@ -43,6 +43,25 @@ export interface TeamMemberStats {
   cashDifference: number;
 }
 
+/** This calendar month at the current pace vs the owner's revenue plan. */
+export interface MonthForecast {
+  month: string;
+  plan: number | null;
+  daysInMonth: number;
+  daysElapsed: number;
+  /** "recent" = the month just started, so the pace is the last 14 days. */
+  basis: "month" | "recent";
+  actual: number;
+  actualProfit: number;
+  avgDaily: number;
+  forecast: number;
+  forecastProfit: number;
+  actualPercent: number | null;
+  forecastPercent: number | null;
+  neededPerDay: number | null;
+  cumulative: { date: string; actual: number | null; forecast: number | null }[];
+}
+
 export interface AnalyticsData {
   range: { from: string; to: string };
   statement: ProfitAndLoss;
@@ -51,11 +70,18 @@ export interface AnalyticsData {
   changes: Record<"revenue" | "grossProfit" | "expenses" | "netProfit" | "salesCount", number | null>;
   expensesByCategory: { category: string; amount: number }[];
   series: { date: string; revenue: number; expenses: number; profit: number }[];
+  forecast: MonthForecast;
   team: TeamMemberStats[];
   tasks: { open: number; overdue: number; doneInPeriod: number };
 }
 
 export async function getAnalytics(preset: ReportPreset, from?: string, to?: string): Promise<AnalyticsData> {
   const { data } = await api.get<AnalyticsData>("/analytics", { params: { preset, from, to } });
+  return data;
+}
+
+/** null clears the plan. */
+export async function setMonthlyPlan(monthlyRevenuePlan: number | null): Promise<{ monthlyRevenuePlan: number | null }> {
+  const { data } = await api.put<{ monthlyRevenuePlan: number | null }>("/analytics/plan", { monthlyRevenuePlan });
   return data;
 }
