@@ -79,6 +79,9 @@ model Business {
   // Largest discount (percent of the receipt) a seller may give at the POS.
   // Owner and manager are not limited — see "discounts.unlimited".
   maxDiscountPercent Int              @default(10)
+  // Monthly sales target (revenue). The statistics page forecasts how much
+  // of it the month will reach at the current pace. Null = no plan set.
+  monthlyRevenuePlan Decimal?         @db.Decimal(14, 2)
   // Subscription (see src/config/plans.ts). Past planExpiresAt the business
   // is read-only until the platform admin records a payment and extends it.
   plan               SubscriptionPlan @default(PRO)
