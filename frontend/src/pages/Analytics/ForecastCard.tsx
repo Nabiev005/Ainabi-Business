@@ -170,7 +170,10 @@ export function ForecastCard({ forecast: f, canEditPlan, onPlanChange }: Props) 
               <Line type="monotone" dataKey="forecast" stroke={FORECAST_COLOR} strokeWidth={2.5} strokeDasharray="6 5" dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>
-          <p className="field-hint">{f.basis === "recent" ? t("analytics.forecast.basisRecent") : t("analytics.forecast.basisMonth", { count: f.daysElapsed - 1 })}</p>
+          <p className="field-hint">
+            {f.basis === "recent" ? t("analytics.forecast.basisRecent") : t("analytics.forecast.basisMonth", { count: f.daysElapsed - 1 })}
+            {f.weekdayAdjusted && ` ${t("analytics.forecast.basisWeekdays")}`}
+          </p>
         </div>
       </div>
 

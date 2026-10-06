@@ -1,3 +1,13 @@
+/** Calendar day of a moment in the server's (= the shop's) timezone, "YYYY-MM-DD". */
+export function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** `new Date("2026-10-01")` is UTC midnight by spec — read a bare date as local midnight instead. */
+function parseBound(value: string): Date {
+  return new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
+}
+
 export type DatePreset = "today" | "yesterday" | "7d" | "30d" | "month" | "prevMonth";
 
 export function resolvePreset(preset: DatePreset | undefined, from?: string, to?: string) {
@@ -6,7 +16,7 @@ export function resolvePreset(preset: DatePreset | undefined, from?: string, to?
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
   if (from && to) {
-    return { start: new Date(from), end: new Date(to) };
+    return { start: parseBound(from), end: parseBound(to) };
   }
 
   switch (preset) {

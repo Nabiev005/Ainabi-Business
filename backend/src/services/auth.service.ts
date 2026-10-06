@@ -1,10 +1,12 @@
+import { randomBytes } from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../config/prisma";
 import { env } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 import { comparePassword, hashPassword, hashToken } from "../utils/password";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
-import { ChangePasswordInput, GoogleAuthInput, LoginInput, RegisterInput } from "../validators/auth.validator";
+import { ChangePasswordInput, ForgotPasswordInput, GoogleAuthInput, LoginInput, RegisterInput, ResetPasswordInput } from "../validators/auth.validator";
+import { escapeHtml, isEmailEnabled, sendEmail } from "../utils/mailer";
 import { applyTemplate } from "./settings.service";
 import type { Lang } from "../i18n/messages";
 import { permissionsFor, Role } from "../config/permissions";
@@ -327,4 +329,81 @@ export async function changePassword(
 
   const tokens = await issueTokens(auth.userId, auth.businessId, auth.employeeId, auth.role);
   return { ...tokens, session: await getSession(auth.userId, auth.businessId) };
+}
+
+const RESET_TOKEN_TTL_MINUTES = 60;
+
+const RESET_EMAIL = {
+  ky: {
+    subject: "Ainabi Business — паролду калыбына келтирүү",
+    greeting: (name: string) => `Саламатсызбы, ${name}!`,
+    body: "Ainabi Business аккаунтуңуз үчүн жаңы пароль коюу суралды. Төмөнкү шилтемени басып, жаңы паролуңузду коюңуз:",
+    button: "Жаңы пароль коюу",
+    expiry: `Шилтеме ${RESET_TOKEN_TTL_MINUTES} мүнөт иштейт жана бир жолу гана колдонулат.`,
+    ignore: "Эгер муну сиз сураган эмес болсоңуз, бул катты көңүлгө албаңыз — паролуңуз өзгөрбөйт.",
+  },
+  ru: {
+    subject: "Ainabi Business — восстановление пароля",
+    greeting: (name: string) => `Здравствуйте, ${name}!`,
+    body: "Для вашего аккаунта Ainabi Business запрошен новый пароль. Нажмите на ссылку ниже и задайте новый пароль:",
+    button: "Задать новый пароль",
+    expiry: `Ссылка действует ${RESET_TOKEN_TTL_MINUTES} минут и только один раз.`,
+    ignore: "Если вы этого не запрашивали, просто проигнорируйте письмо — пароль не изменится.",
+  },
+};
+
+/**
+ * Emails a one-time link to set a new password. Always "succeeds" from the
+ * caller's point of view — whether the email exists is never revealed.
+ */
+export async function requestPasswordReset(input: ForgotPasswordInput, lang: Lang = "ky") {
+  if (!isEmailEnabled()) throw ApiError.badRequest("Email аркылуу калыбына келтирүү бул серверде жандырылган эмес.");
+
+  // Emails were stored as typed, so match regardless of case.
+  const user = await prisma.user.findFirst({ where: { email: { equals: input.email, mode: "insensitive" } } });
+  if (!user) return;
+
+  const token = randomBytes(32).toString("base64url");
+  await prisma.$transaction([
+    // Only the newest link works.
+    prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } }),
+    prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60_000) },
+    }),
+  ]);
+
+  const link = `${env.clientUrls[0]}/reset-password?token=${token}`;
+  const m = RESET_EMAIL[lang];
+  const name = escapeHtml(user.name);
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: m.subject,
+      text: `${m.greeting(user.name)}\n\n${m.body}\n${link}\n\n${m.expiry}\n${m.ignore}`,
+      html: `<div style="font-family:Arial,sans-serif;font-size:15px;color:#101828;line-height:1.5">
+<p>${m.greeting(name)}</p>
+<p>${m.body}</p>
+<p><a href="${link}" style="display:inline-block;background:#1d4ed8;color:#ffffff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">${m.button}</a></p>
+<p style="color:#475467;font-size:13px">${m.expiry}<br>${m.ignore}</p>
+</div>`,
+    });
+  } catch (error) {
+    console.error("Password reset email failed:", error);
+    throw new ApiError(502, "Катты жөнөтүү мүмкүн болбоду. Бир аздан кийин кайра аракет кылыңыз.");
+  }
+}
+
+/** Sets the new password from an emailed link and signs the person out everywhere. */
+export async function resetPassword(input: ResetPasswordInput) {
+  const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(input.token) } });
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    throw ApiError.badRequest("Шилтеменин мөөнөтү өтүп кеткен же ал мурун колдонулган. Жаңы шилтеме сураңыз.");
+  }
+
+  const passwordHash = await hashPassword(input.newPassword);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: record.userId }, data: { passwordHash, mustChangePassword: false } }),
+    prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+    prisma.refreshToken.updateMany({ where: { userId: record.userId, revoked: false }, data: { revoked: true } }),
+  ]);
 }

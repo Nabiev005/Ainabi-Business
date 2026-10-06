@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Award, Download, Percent, Receipt, ShoppingBag, TrendingUp, Trophy, Undo2, Wallet, Wrench } from "lucide-react";
+import { Award, Download, FileSpreadsheet, Percent, Receipt, ShoppingBag, TrendingUp, Trophy, Undo2, Wallet, Wrench } from "lucide-react";
 import { KpiCard } from "../../components/ui/KpiCard";
 import { Skeleton, SkeletonRows } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -10,6 +10,7 @@ import * as reportService from "../../services/report.service";
 import type { ReportData, ReportPreset } from "../../services/report.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatMoney, formatNumber } from "../../utils/format";
+import { downloadReportXlsx } from "./exportXlsx";
 
 const PRESET_ORDER: ReportPreset[] = ["today", "yesterday", "7d", "30d", "month", "prevMonth", "custom"];
 
@@ -31,10 +32,11 @@ export default function Reports() {
       .catch((error) => showToast({ variant: "error", title: t("reports.reportLoadFailed"), message: extractErrorMessage(error) }));
   }, [preset, from, to, showToast, t]);
 
-  async function handleExport() {
+  async function handleExport(format: "xlsx" | "csv") {
     setExporting(true);
     try {
-      await reportService.downloadReportCsv(preset, preset === "custom" ? from : undefined, preset === "custom" ? to : undefined);
+      if (format === "xlsx") await downloadReportXlsx(report!, t);
+      else await reportService.downloadReportCsv(preset, preset === "custom" ? from : undefined, preset === "custom" ? to : undefined);
     } catch (error) {
       showToast({ variant: "error", title: t("reports.exportFailed"), message: extractErrorMessage(error) });
     } finally {
@@ -49,10 +51,16 @@ export default function Reports() {
           <h1 className="page-title">{t("reports.title")}</h1>
           <p className="page-subtitle">{t("reports.subtitle")}</p>
         </div>
-        <button className="btn btn-secondary" onClick={handleExport} disabled={exporting || !report}>
-          <Download size={16} />
-          {exporting ? t("reports.exporting") : t("reports.export")}
-        </button>
+        <div className="row gap-2">
+          <button className="btn btn-primary" onClick={() => handleExport("xlsx")} disabled={exporting || !report}>
+            <FileSpreadsheet size={16} />
+            {exporting ? t("reports.exporting") : t("reports.exportXlsx")}
+          </button>
+          <button className="btn btn-secondary" onClick={() => handleExport("csv")} disabled={exporting || !report}>
+            <Download size={16} />
+            {t("reports.export")}
+          </button>
+        </div>
       </div>
 
       <div className="card card-pad">

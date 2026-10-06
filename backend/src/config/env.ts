@@ -53,6 +53,13 @@ export const env = {
     clientId: (process.env.GOOGLE_CLIENT_ID ?? "").trim(),
   },
   refreshCookieName: "ainabi_refresh_token",
+  // Transactional email (password reset links) via Resend. Both unset = no
+  // email; "forgot password" then points people to the owner / support.
+  mail: {
+    resendApiKey: (process.env.RESEND_API_KEY ?? "").trim(),
+    // e.g. "Ainabi Business <no-reply@ainabi.site>" — the domain must be verified in Resend.
+    from: (process.env.MAIL_FROM ?? "").trim(),
+  },
   // Platform owner(s) — can see every business and extend subscriptions
   // after a payment. Comma-separated emails of existing accounts.
   platformAdminEmails: (process.env.PLATFORM_ADMIN_EMAILS || "ajbeknabiev90@gmail.com")

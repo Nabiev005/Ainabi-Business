@@ -1,3 +1,4 @@
+import "./config/timezone";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -48,7 +49,10 @@ const authBruteForceLimiter = rateLimit({
     message: translate("Аракеттер өтө көп болду. Бир аз күтүп, кайра аракет кылыңыз.", req.lang),
   }),
 });
-app.use(["/api/auth/login", "/api/auth/register", "/api/auth/google", "/api/auth/change-password"], authBruteForceLimiter);
+app.use(
+  ["/api/auth/login", "/api/auth/register", "/api/auth/google", "/api/auth/change-password", "/api/auth/forgot-password", "/api/auth/reset-password"],
+  authBruteForceLimiter,
+);
 
 // Looser limit across the whole API — defense-in-depth without getting in the
 // way of a busy cashier terminal hammering /sales and /products all day.

@@ -49,3 +49,17 @@ export async function fetchSession(): Promise<Session> {
   const { data } = await api.get<Session>("/auth/me");
   return data;
 }
+
+/** Whether the server can email reset links (otherwise the page shows the manual ways). */
+export async function getPasswordResetStatus(): Promise<{ emailEnabled: boolean }> {
+  const { data } = await api.get<{ emailEnabled: boolean }>("/auth/password-reset");
+  return data;
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await api.post("/auth/forgot-password", { email });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await api.post("/auth/reset-password", { token, newPassword });
+}

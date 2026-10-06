@@ -29,3 +29,15 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("Email туура эмес"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(20).max(200),
+  newPassword: z.string().min(8, "Пароль эң аз дегенде 8 белгиден турушу керек").max(200),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

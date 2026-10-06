@@ -3,7 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
 import { clearRefreshCookie, setRefreshCookie } from "../utils/cookies";
 import { env } from "../config/env";
-import { changePasswordSchema, googleAuthSchema, loginSchema, registerSchema } from "../validators/auth.validator";
+import { changePasswordSchema, forgotPasswordSchema, googleAuthSchema, loginSchema, registerSchema, resetPasswordSchema } from "../validators/auth.validator";
+import { isEmailEnabled } from "../utils/mailer";
 import * as authService from "../services/auth.service";
 
 export const registerHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -56,4 +57,22 @@ export const changePasswordHandler = asyncHandler(async (req: Request, res: Resp
 export const meHandler = asyncHandler(async (req: Request, res: Response) => {
   const session = await authService.getSession(req.auth!.userId, req.auth!.businessId);
   res.status(200).json(session);
+});
+
+/** Lets the "forgot password" page choose between the email form and the manual path. */
+export const passwordResetStatusHandler = asyncHandler(async (_req: Request, res: Response) => {
+  res.json({ emailEnabled: isEmailEnabled() });
+});
+
+export const forgotPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  const input = forgotPasswordSchema.parse(req.body);
+  await authService.requestPasswordReset(input, req.lang);
+  // Same answer whether or not the address has an account.
+  res.json({ ok: true });
+});
+
+export const resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  const input = resetPasswordSchema.parse(req.body);
+  await authService.resetPassword(input);
+  res.json({ ok: true });
 });
