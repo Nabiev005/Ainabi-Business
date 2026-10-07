@@ -1,6 +1,6 @@
 import { prisma } from "../config/prisma";
 import { round2, toNumber } from "../utils/money";
-import { resolvePreset } from "../utils/dateRange";
+import { dayKey, resolvePreset } from "../utils/dateRange";
 import { DashboardQuery } from "../validators/dashboard.validator";
 
 const WEEKDAYS_KY = ["Жек", "Дүй", "Шей", "Шар", "Бей", "Жума", "Ишм"];
@@ -98,17 +98,17 @@ export async function getSalesDynamics(businessId: string, days = 7) {
   for (let i = 0; i < days; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    buckets.push({ date: d.toISOString().slice(0, 10), label: WEEKDAYS_KY[d.getDay()], sales: 0, expenses: 0 });
+    buckets.push({ date: dayKey(d), label: WEEKDAYS_KY[d.getDay()], sales: 0, expenses: 0 });
   }
 
   const indexByDate = new Map(buckets.map((b, i) => [b.date, i]));
   for (const sale of sales) {
-    const key = sale.createdAt.toISOString().slice(0, 10);
+    const key = dayKey(sale.createdAt);
     const idx = indexByDate.get(key);
     if (idx !== undefined) buckets[idx].sales = round2(buckets[idx].sales + toNumber(sale.total));
   }
   for (const expense of expenses) {
-    const key = expense.createdAt.toISOString().slice(0, 10);
+    const key = dayKey(expense.createdAt);
     const idx = indexByDate.get(key);
     if (idx !== undefined) buckets[idx].expenses = round2(buckets[idx].expenses + toNumber(expense.amount));
   }

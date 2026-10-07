@@ -51,6 +51,8 @@ export interface MonthForecast {
   daysElapsed: number;
   /** "recent" = the month just started, so the pace is the last 14 days. */
   basis: "month" | "recent";
+  /** Weekdays are weighted by the last eight weeks (weekends often sell more). */
+  weekdayAdjusted: boolean;
   actual: number;
   actualProfit: number;
   avgDaily: number;

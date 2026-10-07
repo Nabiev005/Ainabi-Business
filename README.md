@@ -86,34 +86,38 @@ typography CSS-өзгөрмөлөрдүн жалгыз булагы (`--color-pr
 
 `backend/prisma/schema.prisma` — толук схема. Негизги моделдер:
 
-`User` → `Employee` (роль: OWNER/ADMIN/CASHIER) → `Business`. Андан ары:
-`Category`, `Product`, `Customer`, `Sale` + `SaleItem`, `StockMovement`,
-`Debt` + `DebtPayment`, `Expense`, `Supplier`, `RefreshToken`.
+- **Аккаунт:** `User` → `Employee` (роль: OWNER / ADMIN / ACCOUNTANT / CASHIER / REGISTRAR) → `Business`; `RefreshToken`, `PasswordResetToken`, `SubscriptionPayment`.
+- **Товар:** `Category`, `Product` (+ варианттар, пакеттер, аналогдор, IMEI/сериялар, партиялар/мөөнөт), `Location` (филиалдар), `ProductStock`, `StockMovement`, `StockTransfer`.
+- **Кабыл алуу / эсеп:** `Supplier`, `SupplierDebt`, `PurchaseReceipt`, `InventoryCount`.
+- **Сатуу:** `Sale` + `SaleItem`, `SaleReturn`, `CashShift` + `CashMovement`, `Customer`, `Debt` + `DebtPayment`.
+- **Башкалар:** `Expense`, `RepairOrder`, `Task`, `PipelineStage` + `ProductStageEvent`.
 
 Бардык бизнеске тиешелүү таблицаларда `businessId` бар жана бардык
 query'лер `req.auth.businessId` менен чектелет — бир бизнестин
-маалыматы экинчисине эч качан көрүнбөйт.
+маалыматы экинчисине эч качан көрүнбөйт. Акча талаалары `Decimal`.
 
 ## 5. API структурасы
 
 ```
-/api/auth        register, login, google, refresh, logout, me
-/api/dashboard    summary, sales-dynamics, top-products, low-stock
-/api/categories   CRUD
-/api/products     CRUD, barcode/:code
-/api/sales        POS сатуу түзүү, тарых
-/api/stock        киреше/чыгаша/списание/оңдоо, тарых, summary
-/api/customers    CRUD, профиль (сатуу + карыз тарыхы)
-/api/debts        CRUD, /: id/payments (төлөм кабыл алуу)
-/api/expenses     CRUD
-/api/employees    invite, роль/статус өзгөртүү (OWNER/ADMIN гана)
-/api/reports      filter (today/7d/30d/month/custom), /export.csv
-/api/settings     business профили
+/api/auth        register, login, google, refresh, logout, me, change-password,
+                 password-reset, forgot-password, reset-password
+/api/dashboard   KPI, сатуу динамикасы, top products, low stock
+/api/products    CRUD, штрих-код, импорт, варианттар     /api/categories  CRUD
+/api/sales       POS сатуу, тарых, кайтаруу              /api/shifts      касса сменалары
+/api/stock       кирим/чыгым/списание/которуу/инвентаризация
+/api/suppliers   жеткирүүчүлөр, аларга карыз            /api/customers   CRUD, профиль
+/api/debts       карыздар, төлөмдөр                     /api/expenses    CRUD
+/api/repairs     ремонт заказдары                       /api/tasks       тапшырмалар
+/api/pipeline    товар воронкасы                        /api/employees   кызматкерлер, ролдор
+/api/reports     отчет, /export.csv                     /api/analytics   P&L, команда, айлык план/прогноз
+/api/insights    айлык кеңештер                         /api/settings    бизнес, филиалдар, товар жөндөөлөрү
+/api/billing     тариф/подписка                         /api/platform    платформа админи
 ```
 
 Ар бир модуль `routes/ → controllers/ → services/ → validators/ (Zod)`
-катмарларына бөлүнгөн. `requireAuth` JWT'ди текшерет, `requireRole`
-роль боюнча чектейт.
+катмарларына бөлүнгөн. `requireAuth` JWT'ди текшерет, `requirePermission`
+ролго жараша укукту (`config/permissions.ts`), `requireFeature` тарифти
+(`config/plans.ts`) текшерет.
 
 ## 6. Коопсуздук архитектурасы
 
@@ -146,17 +150,22 @@ query'лер `req.auth.businessId` менен чектелет — бир биз
 - **Валидация:** бардык POST/PUT денеси Zod схемасынан өтөт, Prisma бардык
   SQL'ди parameterize кылат (SQL injection мүмкүн эмес).
 
-## 7. Учурдагы абал жана кийинки кадамдар
+## 7. Учурдагы абал
 
-Ишке киргизилген: аутентификация (JWT + httpOnly refresh cookie + Google
-Sign-In), Dashboard (KPI, графиктер, top products, low stock), Товарлар
-(CRUD, фильтр, pagination), POS (себет, штрих-код, төлөм ыкмалары, склад
-автоматтык азаят), Склад (калдык/киреше/чыгаша/списание/тарых), Кардарлар
-+ профиль, Карыз дептери (кошуу/төлөм), Чыгымдар, Отчеттор (CSV экспорт
-менен), Кызматкерлер (роль/статус башкаруу).
+Иштеп жаткан бөлүмдөр: аутентификация (JWT + httpOnly refresh cookie,
+Google, email аркылуу паролду калыбына келтирүү), Dashboard, товарлар
+(варианттар, IMEI, мөөнөт, импорт, этикеткалар), POS, склад жана
+филиалдар, товар кабыл алуу, инвентаризация, кайтаруулар, касса
+сменалары, ремонт, кардарлар, карыздар, жеткирүүчүлөр, чыгымдар,
+отчеттор (Excel жана CSV), статистика (P&L, айлык план жана прогноз),
+айлык кеңештер, тапшырмалар, воронка, 5 роль, тарифтер, платформа
+админи, кыргызча/орусча интерфейс.
 
-Кийинки этапта кошула турганы: email аркылуу пароль калыбына келтирүү,
-Suppliers (жеткирүүчүлөр) толук бөлүк катары, Excel экспорт (азырынча
-CSV гана), Кыргызча/Орусча тил которгуч (архитектура даяр — бардык текст
-`utils/labels.ts` жана компоненттерде борборлоштурулган, бирок котормо
-кийинчерээк кошулат — учурда суранылган жок).
+Убакыт: бардык «бүгүн», «ушул ай» жана күндүк графиктер
+`Asia/Bishkek` убактысы менен эсептелет (`APP_TIMEZONE` менен
+өзгөртсө болот).
+
+Тесттер: `cd backend && npm test` — P&L, прогноз жана даталар үчүн
+unit тесттер (`backend/tests/`).
+
+Калган иштердин тизмеси — [CLAUDE.md](CLAUDE.md).

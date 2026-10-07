@@ -60,6 +60,9 @@ Vercel GitHub репозиторийиңизди import кылганда `fronte
      | `GOOGLE_CLIENT_ID` | Google Cloud Console'догу Client ID | |
      | `VITE_GOOGLE_CLIENT_ID` | Ошол эле Client ID | |
      | `VITE_API_URL` | **коюлбасын** | Бир домен болгондуктан `/api` өзү туура иштейт |
+     | `RESEND_API_KEY` | [Resend](https://resend.com) API ачкычы | Милдеттүү эмес — паролду email аркылуу калыбына келтирүү үчүн |
+     | `MAIL_FROM` | мис. `Ainabi Business <no-reply@ainabi.site>` | Домен Resend'де тастыкталган болушу керек |
+     | `APP_TIMEZONE` | **коюлбасын** (демейки `Asia/Bishkek`) | Башка өлкөдөгү дүкөн үчүн гана |
 
 4. Build/Install командаларды (`prisma generate`, `prisma migrate deploy`)
    жана backend'дин так кайсы файлдан башталарын (`entrypoint`) көрсөтүү

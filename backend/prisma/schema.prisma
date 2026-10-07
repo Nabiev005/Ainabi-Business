@@ -44,11 +44,27 @@ model User {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
-  ownedBusinesses Business[]     @relation("BusinessOwner")
+  ownedBusinesses Business[]           @relation("BusinessOwner")
   employeeOf      Employee[]
   refreshTokens   RefreshToken[]
+  passwordResets  PasswordResetToken[]
 
   @@map("users")
+}
+
+// One-time "set a new password" link sent by email. Only the SHA-256 of the
+// token is stored; the link itself lives in the person's inbox.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model RefreshToken {

@@ -1,6 +1,6 @@
 import { prisma } from "../config/prisma";
 import { round2, toNumber } from "../utils/money";
-import { resolvePreset } from "../utils/dateRange";
+import { dayKey, resolvePreset } from "../utils/dateRange";
 import { ReportQuery } from "../validators/report.validator";
 
 export async function buildReport(businessId: string, query: ReportQuery) {
@@ -78,14 +78,14 @@ export async function buildReport(businessId: string, query: ReportQuery) {
   // Daily series for chart.
   const dayMap = new Map<string, { sales: number; expenses: number }>();
   for (const s of sales) {
-    const key = s.createdAt.toISOString().slice(0, 10);
+    const key = dayKey(s.createdAt);
     const entry = dayMap.get(key) ?? { sales: 0, expenses: 0 };
     entry.sales = round2(entry.sales + toNumber(s.total));
     dayMap.set(key, entry);
   }
   const returnsByDay = new Map<string, number>();
   for (const item of returnItems) {
-    const key = item.return.createdAt.toISOString().slice(0, 10);
+    const key = dayKey(item.return.createdAt);
     returnsByDay.set(key, (returnsByDay.get(key) ?? 0) + toNumber(item.total));
   }
   for (const [key, amount] of returnsByDay) {
@@ -95,7 +95,7 @@ export async function buildReport(businessId: string, query: ReportQuery) {
   }
   const expenses = await prisma.expense.findMany({ where: { businessId, createdAt: { gte: start, lte: end } } });
   for (const e of expenses) {
-    const key = e.createdAt.toISOString().slice(0, 10);
+    const key = dayKey(e.createdAt);
     const entry = dayMap.get(key) ?? { sales: 0, expenses: 0 };
     entry.expenses = round2(entry.expenses + toNumber(e.amount));
     dayMap.set(key, entry);
