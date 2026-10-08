@@ -52,7 +52,7 @@ export async function profitAndLoss(businessId: string, start: Date, end: Date) 
  * always about this month, whatever period the rest of the page shows.
  * The math lives in ./forecast.
  */
-async function monthForecast(businessId: string) {
+export async function monthForecast(businessId: string) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const historyStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - WEEKDAY_HISTORY_DAYS);

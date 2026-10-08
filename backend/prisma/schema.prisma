@@ -138,6 +138,7 @@ model Business {
   updatedAt          DateTime         @updatedAt
 
   employees            Employee[]
+  assistantUsage       AssistantUsage[]
   categories           Category[]
   products             Product[]
   customers            Customer[]
@@ -1101,4 +1102,17 @@ model SubscriptionPayment {
 
   @@index([businessId, createdAt])
   @@map("subscription_payments")
+}
+
+// AI assistant questions per business per day — a cost ceiling that holds
+// across serverless instances.
+model AssistantUsage {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  day        String // "YYYY-MM-DD", shop's local date
+  count      Int      @default(0)
+
+  @@unique([businessId, day])
+  @@map("assistant_usage")
 }

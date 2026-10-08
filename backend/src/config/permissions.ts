@@ -78,6 +78,8 @@ export const PERMISSIONS = {
   "tasks.manage": MANAGEMENT,
   // Team performance + full profit/loss statement.
   "analytics.view": MANAGEMENT,
+  // Ask the AI assistant about sales, profit, stock, debts, the team.
+  "assistant.use": FINANCE,
 
   // Product pipeline (CRM-style board of stages).
   "pipeline.view": ["OWNER", "ADMIN", "ACCOUNTANT", "REGISTRAR"],
