@@ -64,6 +64,7 @@ npm run build               # tsc -b && vite build
 - **Ролдор:** OWNER (ээси), ADMIN (менеджер), ACCOUNTANT (бухгалтер), CASHIER (сатуучу — өздүк нарк менен пайданы көрбөйт), REGISTRAR (товар кабыл алуу).
 - **Тарифтер:** `config/plans.ts` — BASIC / PRO / MAX. Модулдар `requireFeature("analytics")` сыяктуу жабылат, frontend'де `RequireFeature`.
 - **Убакыт:** сервер `Asia/Bishkek` менен иштейт (`config/timezone.ts`, `server.ts`/`app.ts`'тин эң биринчи импорту; `APP_TIMEZONE` менен өзгөрөт). Күндүн ачкычы үчүн `utils/dateRange.ts` ичиндеги `dayKey()` колдонулат, `toISOString().slice(0, 10)` эмес (ал UTC күнүн берет).
+- **Коопсуздук:** платформа админи = `PLATFORM_ADMIN_EMAILS` + Google'га байланышкан аккаунт (`isPlatformAdminUser`). Туура эмес пароль базада саналат (10 жолу → 15 мүн бөгөт). Жаңы текст талаасына `validators/common.ts` ичиндеги `LIMITS` менен чек коюңуз. CSV `utils/csv.ts` аркылуу гана (формула инъекциясынан коргойт).
 - **Акча:** базада `Decimal(12,2)` (Float эмес), эсептөөдө `utils/money.ts` ичиндеги `toNumber` / `round2`.
 - **Миграция:** схеманы өзгөрткөндө `backend/prisma/migrations/<YYYYMMDDHHMMSS>_<ат>/migration.sql` кошулат. Прод'до Vercel build учурунда `prisma migrate deploy` өзү иштейт.
 - **Тексттер:** UI'деги ар бир текст i18n аркылуу берилет. Ачкычты **ky.json жана ru.json экөөнө тең** кошуңуз. Коддогу комментарийлер англисче.

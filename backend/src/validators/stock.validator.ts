@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIMITS } from "./common";
 
 export const stockMovementTypeEnum = z.enum(["IN", "OUT", "ADJUSTMENT", "WRITE_OFF"]);
 
@@ -13,7 +14,7 @@ export const createStockMovementSchema = z.object({
   quantity: z.coerce.number().positive("Саны 0дон чоң болушу керек"),
   purchasePrice: z.coerce.number().nonnegative().optional(),
   supplierId: z.string().optional().nullable(),
-  comment: z.string().optional().nullable(),
+  comment: z.string().max(LIMITS.comment).optional().nullable(),
   locationId: z.string().optional().nullable(),
   expiryDate: optionalDate.optional(),
   batchNumber: z.string().trim().max(60).optional().nullable(),

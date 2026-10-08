@@ -79,3 +79,13 @@ export const env = {
   // Same-domain deployments (or local dev) should leave this unset.
   cookieCrossSite: process.env.COOKIE_CROSS_SITE === "true",
 };
+
+/**
+ * The platform owner: an account whose email is in PLATFORM_ADMIN_EMAILS
+ * *and* is linked to Google. The Google link is the proof the person
+ * controls that mailbox — a password account could have been created with
+ * any address (there is no email verification on sign-up).
+ */
+export function isPlatformAdminUser(user: { email: string; googleId: string | null }): boolean {
+  return !!user.googleId && env.platformAdminEmails.includes(user.email.trim().toLowerCase());
+}

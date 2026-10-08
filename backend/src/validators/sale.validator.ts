@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIMITS } from "./common";
 
 export const saleItemSchema = z.object({
   productId: z.string().min(1),
@@ -11,7 +12,7 @@ export const saleItemSchema = z.object({
 
 export const createSaleSchema = z
   .object({
-    items: z.array(saleItemSchema).min(1, "Кеминде бир товар тандаңыз"),
+    items: z.array(saleItemSchema).min(1, "Кеминде бир товар тандаңыз").max(500),
     discount: z.coerce.number().nonnegative().default(0),
     paymentMethod: z.enum(["CASH", "CARD", "QR", "DEBT"]),
     customerId: z.string().optional().nullable(),
@@ -29,7 +30,7 @@ export const saleQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   // Receipt number or customer name.
-  search: z.string().optional(),
+  search: z.string().max(LIMITS.name).optional(),
   paymentMethod: z.enum(["CASH", "CARD", "QR", "DEBT"]).optional(),
   locationId: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
@@ -43,10 +44,11 @@ export const createReturnSchema = z.object({
         saleItemId: z.string().min(1),
         // In the units the line was sold in (packages if it was sold by package).
         quantity: z.coerce.number().positive("Саны 0дон чоң болушу керек"),
-        serialNumbers: z.array(z.string().trim().min(1)).optional(),
+        serialNumbers: z.array(z.string().trim().min(1).max(64)).max(500).optional(),
       }),
     )
-    .min(1, "Кеминде бир товар тандаңыз"),
+    .min(1, "Кеминде бир товар тандаңыз")
+    .max(500),
   refundMethod: z.enum(["CASH", "CARD", "QR", "DEBT"]),
   reason: z.string().trim().max(300).optional().nullable(),
 });

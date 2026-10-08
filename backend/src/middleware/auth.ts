@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { AccessTokenPayload, verifyAccessToken } from "../utils/jwt";
-import { env } from "../config/env";
+import { isPlatformAdminUser } from "../config/env";
 import { subscriptionInfo } from "../config/plans";
 import "./subscription";
 
@@ -44,7 +44,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         userId: true,
         role: true,
         status: true,
-        user: { select: { mustChangePassword: true, email: true } },
+        user: { select: { mustChangePassword: true, email: true, googleId: true } },
         business: { select: { plan: true, planExpiresAt: true, isTrial: true } },
       },
     });
@@ -58,7 +58,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       return next(new ApiError(403, "Адегенде өзүңүздүн паролуңузду коюңуз.", { code: "PASSWORD_CHANGE_REQUIRED" }));
     }
     req.auth = { ...payload, role: employee.role };
-    req.isPlatformAdmin = env.platformAdminEmails.includes(employee.user.email.toLowerCase());
+    req.isPlatformAdmin = isPlatformAdminUser(employee.user);
     req.subscription = subscriptionInfo(employee.business);
 
     // Subscription ran out: everything stays readable, nothing can change
