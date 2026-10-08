@@ -1,4 +1,5 @@
 import { Prisma, ProductUnit } from "@prisma/client";
+import { resolveProductPrices } from "./currency.service";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
@@ -204,6 +205,8 @@ export function serializeProduct(product: ProductWithRelations) {
     purchasePrice,
     salePrice,
     wholesalePrice: product.wholesalePrice === null ? null : toNumber(product.wholesalePrice),
+    usdPurchasePrice: product.usdPurchasePrice === null ? null : toNumber(product.usdPurchasePrice),
+    usdSalePrice: product.usdSalePrice === null ? null : toNumber(product.usdSalePrice),
     profit: Math.round((salePrice - purchasePrice) * 100) / 100,
     marginPercent: purchasePrice > 0 ? Math.round(((salePrice - purchasePrice) / purchasePrice) * 1000) / 10 : 0,
     attributes: (product.attributes ?? {}) as Record<string, AttributeValue>,
@@ -398,6 +401,7 @@ export async function createProduct(businessId: string, input: ProductInput, emp
     const sku = input.sku || (await generateSku(tx, businessId));
     const barcode = input.barcode || (await ensureUniqueBarcode(tx, businessId, sku));
     const stageId = await firstStageId(tx, businessId);
+    const prices = await resolveProductPrices(tx, businessId, input);
 
     const product = await tx.product.create({
       data: {
@@ -408,8 +412,7 @@ export async function createProduct(businessId: string, input: ProductInput, emp
         categoryId: input.categoryId || null,
         sku,
         barcode,
-        purchasePrice: input.purchasePrice,
-        salePrice: input.salePrice,
+        ...prices,
         wholesalePrice: input.wholesalePrice ?? null,
         quantity: 0,
         minQuantity: input.minQuantity,
@@ -443,6 +446,7 @@ export async function updateProduct(businessId: string, id: string, input: Produ
     if (input.barcode && input.barcode !== existing.barcode) {
       await assertBarcodeFree(tx, businessId, input.barcode, id);
     }
+    const prices = await resolveProductPrices(tx, businessId, input);
 
     await tx.product.update({
       where: { id },
@@ -451,8 +455,7 @@ export async function updateProduct(businessId: string, id: string, input: Produ
         categoryId: input.categoryId || null,
         sku: input.sku || null,
         barcode: input.barcode || null,
-        purchasePrice: input.purchasePrice,
-        salePrice: input.salePrice,
+        ...prices,
         wholesalePrice: input.wholesalePrice ?? null,
         minQuantity: input.minQuantity,
         unit: input.unit,

@@ -1,0 +1,66 @@
+.whatsnew-card {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border: 1px solid var(--color-primary-200);
+  background: linear-gradient(135deg, var(--color-primary-50), var(--color-surface) 60%);
+}
+
+.whatsnew-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.whatsnew-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--space-3);
+}
+
+.whatsnew-item {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.whatsnew-item:hover {
+  border-color: var(--color-primary-500);
+  transform: translateY(-1px);
+}
+
+.whatsnew-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2a78d6, #4a3aa7);
+}
+
+/* Landing page variant */
+.landing-new-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}

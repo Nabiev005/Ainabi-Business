@@ -1,0 +1,50 @@
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+}
+
+.risk-person {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-left: 4px solid var(--color-border);
+}
+
+.risk-person.risk-low {
+  border-left-color: var(--color-info-text);
+}
+
+.risk-person.risk-medium {
+  border-left-color: var(--color-warning-text);
+}
+
+.risk-person.risk-high {
+  border-left-color: var(--color-danger-text);
+  background: var(--color-danger-bg);
+}
+
+.risk-signals {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.risk-signals li.strong {
+  color: var(--color-danger-text);
+  font-weight: 600;
+}
+
+.risk-allclear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  font-weight: 600;
+}

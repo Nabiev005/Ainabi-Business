@@ -66,3 +66,24 @@ export function parseProductFields(value: unknown): ProductFieldDef[] {
   const parsed = productFieldsSchema.safeParse(value);
   return parsed.success ? parsed.data : [];
 }
+
+export const currencySettingsSchema = z.object({
+  usdRateAuto: z.boolean(),
+  usdRate: z.coerce.number().positive("Курс 0дон чоң болушу керек").max(10000).optional().nullable(),
+  priceRounding: z.coerce.number().int().refine((v) => [1, 5, 10, 50, 100].includes(v), "Тегеректөө туура эмес"),
+});
+
+export const catalogSettingsSchema = z.object({
+  enabled: z.boolean(),
+  slug: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{2,39}$/, "Шилтеме 3–40 латын тамга, сан же «-» болушу керек")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+  whatsapp: z.string().trim().max(40).optional().nullable(),
+  showStock: z.boolean().default(false),
+  note: z.string().trim().max(500).optional().nullable(),
+});
+export type CatalogSettingsInput = z.infer<typeof catalogSettingsSchema>;

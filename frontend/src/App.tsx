@@ -41,6 +41,9 @@ const Tasks = lazy(() => import("./pages/Tasks/Tasks"));
 const Pipeline = lazy(() => import("./pages/Pipeline/Pipeline"));
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
 const Assistant = lazy(() => import("./pages/Assistant/Assistant"));
+const Risk = lazy(() => import("./pages/Risk/Risk"));
+const Catalog = lazy(() => import("./pages/Catalog/Catalog"));
+const Wholesale = lazy(() => import("./pages/Wholesale/Wholesale"));
 const Insights = lazy(() => import("./pages/Insights/Insights"));
 const Returns = lazy(() => import("./pages/Returns/Returns"));
 const Stale = lazy(() => import("./pages/Stale/Stale"));
@@ -70,6 +73,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/c/:slug" element={<Catalog />} />
               <Route path="/terms" element={<Terms />} />
 
               <Route element={<ProtectedRoute />}>
@@ -98,6 +102,8 @@ export default function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/insights" element={<RequirePermission permission="analytics.view"><RequireFeature feature="analytics"><Insights /></RequireFeature></RequirePermission>} />
                   <Route path="/assistant" element={<RequirePermission permission="assistant.use"><RequireFeature feature="analytics"><Assistant /></RequireFeature></RequirePermission>} />
+                  <Route path="/risk" element={<RequirePermission permission="analytics.view"><RequireFeature feature="analytics"><Risk /></RequireFeature></RequirePermission>} />
+                  <Route path="/wholesale" element={<RequirePermission permission="wholesale.buy"><Wholesale /></RequirePermission>} />
                   <Route path="/returns" element={<RequirePermission permission="returns.view"><Returns /></RequirePermission>} />
                   <Route path="/stale" element={<RequirePermission permission="stock.stale"><Stale /></RequirePermission>} />
                   <Route path="/billing" element={<RequirePermission permission="settings.business"><Billing /></RequirePermission>} />

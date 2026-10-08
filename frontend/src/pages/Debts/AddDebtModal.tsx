@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/ui/Modal";
-import type { Customer } from "../../types";
+import type { Customer, DebtSchedulePayload } from "../../types";
+import { DebtPlanFields, emptyPlan, PlanValue, planToPayload } from "./DebtPlanFields";
 
 interface AddDebtModalProps {
   open: boolean;
   onClose: () => void;
   customers: Customer[];
   submitting: boolean;
-  onSubmit: (values: { customerId: string; totalAmount: number; comment?: string }) => Promise<void>;
+  onSubmit: (values: { customerId: string; totalAmount: number; comment?: string } & DebtSchedulePayload) => Promise<void>;
 }
 
 export function AddDebtModal({ open, onClose, customers, submitting, onSubmit }: AddDebtModalProps) {
@@ -16,19 +17,21 @@ export function AddDebtModal({ open, onClose, customers, submitting, onSubmit }:
   const [customerId, setCustomerId] = useState("");
   const [amount, setAmount] = useState("");
   const [comment, setComment] = useState("");
+  const [plan, setPlan] = useState<PlanValue>(emptyPlan);
 
   useEffect(() => {
     if (open) {
       setCustomerId("");
       setAmount("");
       setComment("");
+      setPlan(emptyPlan());
     }
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId || !amount) return;
-    await onSubmit({ customerId, totalAmount: Number(amount), comment: comment || undefined });
+    await onSubmit({ customerId, totalAmount: Number(amount), comment: comment || undefined, ...planToPayload(plan) });
   }
 
   return (
@@ -52,6 +55,8 @@ export function AddDebtModal({ open, onClose, customers, submitting, onSubmit }:
           <label className="field-label">{t("debts.addModal.amount")}</label>
           <input type="number" min={1} step="0.01" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
         </div>
+
+        <DebtPlanFields value={plan} onChange={setPlan} total={Number(amount) || 0} />
 
         <div className="field">
           <label className="field-label">{t("debts.addModal.comment")}</label>

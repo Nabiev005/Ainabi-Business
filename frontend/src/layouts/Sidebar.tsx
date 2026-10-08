@@ -29,6 +29,8 @@ import {
   Building2,
   Lightbulb,
   Sparkles,
+  ShieldAlert,
+  Handshake,
   Undo2,
   Hourglass,
   ChevronDown,
@@ -72,6 +74,7 @@ const NAV_ITEMS: Array<{
   { to: "/receiving", key: "receiving", icon: PackagePlus, group: "catalog", show: (s) => can(s, "stock.receive"), feature: "receiving" },
   { to: "/inventory", key: "inventory", icon: ClipboardCheck, group: "catalog", show: (s) => can(s, "stock.inventory"), feature: "inventory" },
   { to: "/stale", key: "stale", icon: Hourglass, group: "catalog", show: (s) => can(s, "stock.stale") },
+  { to: "/wholesale", key: "wholesale", icon: Handshake, group: "catalog", show: (s) => can(s, "wholesale.buy") },
 
   { to: "/customers", key: "customers", icon: Users, group: "money", show: (s) => can(s, "customers.view") },
   { to: "/debts", key: "debts", icon: Wallet, group: "money", show: (s) => can(s, "debts.view") },
@@ -80,6 +83,7 @@ const NAV_ITEMS: Array<{
 
   { to: "/analytics", key: "analytics", icon: ChartPie, group: "reports", show: (s) => can(s, "analytics.view"), feature: "analytics" },
   { to: "/insights", key: "insights", icon: Lightbulb, group: "reports", show: (s) => can(s, "analytics.view"), feature: "analytics" },
+  { to: "/risk", key: "risk", icon: ShieldAlert, group: "reports", show: (s) => can(s, "analytics.view"), feature: "analytics" },
   { to: "/assistant", key: "assistant", icon: Sparkles, group: "reports", show: (s) => can(s, "assistant.use"), feature: "analytics" },
   { to: "/reports", key: "reports", icon: BarChart3, group: "reports", show: (s) => can(s, "reports.view") },
 

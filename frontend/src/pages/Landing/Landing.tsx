@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { NEW_FEATURES } from "../../components/WhatsNew";
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -186,6 +187,27 @@ export default function Landing() {
         </div>
         <div className="landing-hero-image">
           <img src="/og-banner.png" alt="Ainabi Business" />
+        </div>
+      </section>
+
+      <section className="landing-section" id="new">
+        <div className="landing-section-header">
+          <h2 className="landing-section-title">
+            {t("whatsNew.landingTitle")}
+            <span className="landing-new-badge">{t("whatsNew.badge")}</span>
+          </h2>
+          <p className="landing-section-subtitle">{t("whatsNew.landingSubtitle")}</p>
+        </div>
+        <div className="landing-features">
+          {NEW_FEATURES.map(({ key, icon: Icon }) => (
+            <div className="landing-feature-card" key={key}>
+              <div className="landing-feature-icon">
+                <Icon size={22} />
+              </div>
+              <h3>{t(`whatsNew.items.${key}.title`)}</h3>
+              <p>{t(`whatsNew.items.${key}.text`)}</p>
+            </div>
+          ))}
         </div>
       </section>
 

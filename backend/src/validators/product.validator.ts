@@ -29,6 +29,9 @@ export const productSchema = z.object({
   purchasePrice: z.coerce.number().nonnegative("Сатып алуу баасы туура эмес"),
   salePrice: z.coerce.number().nonnegative("Сатуу баасы туура эмес"),
   wholesalePrice: optionalMoney.optional(),
+  // Set = the product is priced in dollars; som prices follow the rate.
+  usdPurchasePrice: optionalMoney.optional(),
+  usdSalePrice: optionalMoney.optional(),
   quantity: z.coerce.number().nonnegative().default(0),
   minQuantity: z.coerce.number().nonnegative().default(0),
   unit: productUnitEnum.default("PIECE"),
