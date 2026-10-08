@@ -62,6 +62,8 @@ Vercel GitHub репозиторийиңизди import кылганда `fronte
      | `VITE_API_URL` | **коюлбасын** | Бир домен болгондуктан `/api` өзү туура иштейт |
      | `RESEND_API_KEY` | [Resend](https://resend.com) API ачкычы | Милдеттүү эмес — паролду email аркылуу калыбына келтирүү үчүн |
      | `MAIL_FROM` | мис. `Ainabi Business <no-reply@ainabi.site>` | Домен Resend'де тастыкталган болушу керек |
+     | `TELEGRAM_BOT_TOKEN` | @BotFather берген токен | Милдеттүү эмес — Telegram отчет/кабарлар үчүн |
+     | `CRON_SECRET` | `openssl rand -hex 24` | Кечки Telegram отчетун Vercel Cron гана иштете алат |
      | `APP_TIMEZONE` | **коюлбасын** (демейки `Asia/Bishkek`) | Башка өлкөдөгү дүкөн үчүн гана |
 
 4. Build/Install командаларды (`prisma generate`, `prisma migrate deploy`)
