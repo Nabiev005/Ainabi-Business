@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../config/prisma";
-import { env } from "../config/env";
+import { env, isPlatformAdminUser, isProduction } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 import { comparePassword, hashPassword, hashToken } from "../utils/password";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
@@ -13,6 +13,11 @@ import { permissionsFor, Role } from "../config/permissions";
 import { PlanId, subscriptionInfo, TRIAL_PLAN, trialEndsAt } from "../config/plans";
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
+/** Wrong passwords in a row before the account is locked for a while. */
+const MAX_FAILED_LOGINS = 10;
+const LOCKOUT_MINUTES = 15;
+/** The seed's well-known demo login must never work on a real deployment. */
+const DEMO_EMAIL = "owner@ainabi.kg";
 const googleClient = new OAuth2Client(env.google.clientId);
 
 function serializeSession(employee: {
@@ -39,7 +44,7 @@ function serializeSession(employee: {
     // What this role may do — the frontend shows menus/buttons from this list.
     permissions: permissionsFor(employee.role),
     subscription: subscriptionInfo(employee.business),
-    isPlatformAdmin: env.platformAdminEmails.includes(employee.user.email.toLowerCase()),
+    isPlatformAdmin: employee.user.isPlatformAdmin,
     employeeId: employee.id,
     locationId: employee.locationId ?? null,
   };
@@ -75,6 +80,7 @@ function toSessionUser(user: {
   avatarUrl: string | null;
   provider: string;
   passwordHash?: string | null;
+  googleId?: string | null;
   mustChangePassword?: boolean;
 }) {
   return {
@@ -86,6 +92,7 @@ function toSessionUser(user: {
     provider: user.provider,
     hasPassword: !!user.passwordHash,
     mustChangePassword: !!user.mustChangePassword,
+    isPlatformAdmin: isPlatformAdminUser({ email: user.email, googleId: user.googleId ?? null }),
   };
 }
 
@@ -146,13 +153,37 @@ export async function login(input: LoginInput) {
     throw ApiError.unauthorized("Email же пароль туура эмес.");
   }
 
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    throw new ApiError(429, "Пароль көп жолу туура эмес терилди. 15 мүнөттөн кийин кайра аракет кылыңыз же паролду калыбына келтириңиз.");
+  }
+
   if (!user.passwordHash) {
     throw ApiError.unauthorized("Бул аккаунт Google аркылуу катталган. \"Google менен кирүү\" баскычын колдонуңуз.");
   }
 
   const valid = await comparePassword(input.password, user.passwordHash);
   if (!valid) {
+    // Counted in the database: the per-IP limiter lives in one serverless
+    // instance's memory and doesn't stop a guesser spread across instances.
+    // Atomic increment, so parallel guesses can't all read the same count.
+    const { failedLogins } = await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLogins: { increment: 1 } },
+      select: { failedLogins: true },
+    });
+    if (failedLogins >= MAX_FAILED_LOGINS) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLogins: 0, lockedUntil: new Date(Date.now() + LOCKOUT_MINUTES * 60_000) },
+      });
+    }
     throw ApiError.unauthorized("Email же пароль туура эмес.");
+  }
+  if (isProduction && user.email === DEMO_EMAIL && input.password === "password123") {
+    throw ApiError.unauthorized("Email же пароль туура эмес.");
+  }
+  if (user.failedLogins > 0 || user.lockedUntil) {
+    await prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
   }
 
   const employee = await primaryEmployeeFor(user.id);
@@ -202,10 +233,27 @@ export async function loginWithGoogle(input: GoogleAuthInput, lang: Lang = "ky")
     const existingByEmail = await prisma.user.findUnique({ where: { email: payload.email } });
     if (existingByEmail) {
       // Same email already registered (password account) — link Google to it.
-      user = await prisma.user.update({
-        where: { id: existingByEmail.id },
-        data: { googleId: payload.sub, avatarUrl: payload.picture ?? existingByEmail.avatarUrl },
-      });
+      // Sign-up never verified that address, so the password may have been
+      // chosen by someone else who registered it first, waiting for the real
+      // owner to arrive. Google has now proven who owns the mailbox: drop
+      // that password and every session it opened. The owner can set a new
+      // password from their profile.
+      const [linked] = await prisma.$transaction([
+        prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            googleId: payload.sub,
+            avatarUrl: payload.picture ?? existingByEmail.avatarUrl,
+            passwordHash: null,
+            mustChangePassword: false,
+            failedLogins: 0,
+            lockedUntil: null,
+          },
+        }),
+        prisma.refreshToken.updateMany({ where: { userId: existingByEmail.id, revoked: false }, data: { revoked: true } }),
+        prisma.passwordResetToken.deleteMany({ where: { userId: existingByEmail.id } }),
+      ]);
+      user = linked;
     }
   }
 
@@ -362,6 +410,9 @@ export async function requestPasswordReset(input: ForgotPasswordInput, lang: Lan
   // Emails were stored as typed, so match regardless of case.
   const user = await prisma.user.findFirst({ where: { email: { equals: input.email, mode: "insensitive" } } });
   if (!user) return;
+  // Someone hammering the form shouldn't flood the person's inbox.
+  const recent = await prisma.passwordResetToken.findFirst({ where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 60_000) } } });
+  if (recent) return;
 
   const token = randomBytes(32).toString("base64url");
   await prisma.$transaction([
@@ -402,7 +453,7 @@ export async function resetPassword(input: ResetPasswordInput) {
 
   const passwordHash = await hashPassword(input.newPassword);
   await prisma.$transaction([
-    prisma.user.update({ where: { id: record.userId }, data: { passwordHash, mustChangePassword: false } }),
+    prisma.user.update({ where: { id: record.userId }, data: { passwordHash, mustChangePassword: false, failedLogins: 0, lockedUntil: null } }),
     prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
     prisma.refreshToken.updateMany({ where: { userId: record.userId, revoked: false }, data: { revoked: true } }),
   ]);

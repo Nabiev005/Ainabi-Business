@@ -402,7 +402,7 @@ export async function findBySerial(businessId: string, serial: string) {
 export async function createReturn(businessId: string, employeeId: string, saleId: string, input: CreateReturnInput) {
   const sale = await prisma.sale.findFirst({
     where: { id: saleId, businessId },
-    include: { items: { include: { product: true } }, debt: true },
+    include: { items: { include: { product: true, returnItems: { select: { serialNumbers: true } } } }, debt: true },
   });
   if (!sale) throw ApiError.notFound("Сатуу табылган жок.");
   const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
@@ -411,6 +411,11 @@ export async function createReturn(businessId: string, employeeId: string, saleI
   const subtotal = toNumber(sale.subtotal);
   const paidRatio = subtotal > 0 ? toNumber(sale.total) / subtotal : 1;
 
+  // One entry per sold line, and an IMEI only once — otherwise ["A", "A"]
+  // would put two units back on the shelf for one returned phone.
+  if (new Set(input.items.map((i) => i.saleItemId)).size !== input.items.length) {
+    throw ApiError.badRequest("Бир товар тизмеде эки жолу турат.");
+  }
   const lines = input.items.map((req) => {
     const item = itemMap.get(req.saleItemId);
     if (!item) throw ApiError.badRequest("Кайтарылуучу товар бул сатууда жок.");
@@ -425,7 +430,12 @@ export async function createReturn(businessId: string, employeeId: string, saleI
     let serials: string[] = [];
     if (item.serialNumbers.length > 0) {
       serials = (req.serialNumbers ?? []).map((s) => s.trim().toUpperCase());
-      if (serials.length !== baseQuantity || serials.some((s) => !item.serialNumbers.includes(s))) {
+      const alreadyReturned = new Set(item.returnItems.flatMap((r) => r.serialNumbers));
+      if (
+        serials.length !== baseQuantity ||
+        new Set(serials).size !== serials.length ||
+        serials.some((s) => !item.serialNumbers.includes(s) || alreadyReturned.has(s))
+      ) {
         throw ApiError.badRequest(`"${item.product.name}" үчүн кайтарылган IMEI/сериялык номерлерди тандаңыз.`);
       }
     }

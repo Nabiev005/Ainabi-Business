@@ -41,6 +41,10 @@ model User {
   // Set when someone else chose the password (owner invited / reset it):
   // the person must pick their own before using the app.
   mustChangePassword Boolean      @default(false)
+  // Wrong-password lockout, kept in the database so it holds across
+  // serverless instances (an in-memory limiter resets per instance).
+  failedLogins       Int          @default(0)
+  lockedUntil        DateTime?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { reportQuerySchema } from "../validators/report.validator";
 import * as reportService from "../services/report.service";
+import { toCsv } from "../utils/csv";
 
 export const summaryHandler = asyncHandler(async (req: Request, res: Response) => {
   const query = reportQuerySchema.parse(req.query);
@@ -12,7 +13,7 @@ export const summaryHandler = asyncHandler(async (req: Request, res: Response) =
 export const exportCsvHandler = asyncHandler(async (req: Request, res: Response) => {
   const query = reportQuerySchema.parse(req.query);
   const report = await reportService.buildReport(req.auth!.businessId, query);
-  const csv = reportService.toCsv(
+  const csv = toCsv(
     report.productPerformance.map((p) => ({
       Товар: p.name,
       "Сатылган саны": p.quantitySold,

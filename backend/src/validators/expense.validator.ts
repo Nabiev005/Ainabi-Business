@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIMITS } from "./common";
 
 export const expenseCategoryEnum = z.enum([
   "RENT",
@@ -13,7 +14,7 @@ export const expenseCategoryEnum = z.enum([
 export const expenseSchema = z.object({
   category: expenseCategoryEnum,
   amount: z.coerce.number().positive("Сумма 0дон чоң болушу керек"),
-  comment: z.string().optional().nullable(),
+  comment: z.string().max(LIMITS.comment).optional().nullable(),
 });
 
 export const expenseQuerySchema = z.object({

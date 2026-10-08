@@ -1,12 +1,13 @@
 import { z } from "zod";
+import { LIMITS } from "./common";
 import { BUSINESS_TYPE_IDS } from "../config/businessTemplates";
 
 export const updateBusinessSchema = z.object({
-  name: z.string().min(2, "Бизнес атын жазыңыз"),
-  phone: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  currency: z.string().min(1).default("KGS"),
-  qrPaymentInfo: z.string().optional().nullable(),
+  name: z.string().min(2, "Бизнес атын жазыңыз").max(LIMITS.name),
+  phone: z.string().max(LIMITS.phone).optional().nullable(),
+  address: z.string().max(LIMITS.comment).optional().nullable(),
+  currency: z.string().min(1).max(10).default("KGS"),
+  qrPaymentInfo: z.string().max(LIMITS.comment).optional().nullable(),
   maxDiscountPercent: z.coerce.number().int().min(0, "Скидка 0дон 100гө чейин болушу керек").max(100, "Скидка 0дон 100гө чейин болушу керек").optional(),
 });
 
