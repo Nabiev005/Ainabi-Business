@@ -55,6 +55,12 @@ export const env = {
   refreshCookieName: "ainabi_refresh_token",
   // Transactional email (password reset links) via Resend. Both unset = no
   // email; "forgot password" then points people to the owner / support.
+  // AI assistant (Claude). No ANTHROPIC_API_KEY = the assistant is off.
+  assistant: {
+    apiKey: (process.env.ANTHROPIC_API_KEY ?? "").trim(),
+    // Questions per business per day — keeps the API bill predictable.
+    dailyLimit: Number(process.env.ASSISTANT_DAILY_LIMIT ?? 40),
+  },
   mail: {
     resendApiKey: (process.env.RESEND_API_KEY ?? "").trim(),
     // e.g. "Ainabi Business <no-reply@ainabi.site>" — the domain must be verified in Resend.

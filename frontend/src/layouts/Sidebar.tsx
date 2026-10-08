@@ -28,6 +28,7 @@ import {
   Gem,
   Building2,
   Lightbulb,
+  Sparkles,
   Undo2,
   Hourglass,
   ChevronDown,
@@ -79,6 +80,7 @@ const NAV_ITEMS: Array<{
 
   { to: "/analytics", key: "analytics", icon: ChartPie, group: "reports", show: (s) => can(s, "analytics.view"), feature: "analytics" },
   { to: "/insights", key: "insights", icon: Lightbulb, group: "reports", show: (s) => can(s, "analytics.view"), feature: "analytics" },
+  { to: "/assistant", key: "assistant", icon: Sparkles, group: "reports", show: (s) => can(s, "assistant.use"), feature: "analytics" },
   { to: "/reports", key: "reports", icon: BarChart3, group: "reports", show: (s) => can(s, "reports.view") },
 
   { to: "/tasks", key: "tasks", icon: ListTodo, group: "team", show: () => true, feature: "tasks" },

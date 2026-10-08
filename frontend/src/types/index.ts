@@ -39,6 +39,7 @@ export type Permission =
   | "employees.manage"
   | "tasks.manage"
   | "analytics.view"
+  | "assistant.use"
   | "pipeline.view"
   | "pipeline.move"
   | "pipeline.configure"
