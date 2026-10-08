@@ -26,6 +26,7 @@ import * as productService from "../../services/product.service";
 import type { DashboardRange, DashboardSummary, LowStockProduct, Product, SalesDynamicsPoint, TopProduct } from "../../types";
 import "../../layouts/layout.css";
 import { AlertsCard } from "./AlertsCard";
+import { WhatsNewCard } from "../../components/WhatsNew";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -95,6 +96,8 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      <WhatsNewCard />
 
       <AlertsCard />
 
