@@ -1,3 +1,5 @@
+import * as riskService from "../services/risk.service";
+import { reportQuerySchema } from "../validators/report.validator";
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth";
@@ -23,6 +25,15 @@ router.get(
   }),
 );
 
+// Till watch: who to look at and why (discounts, below-cost sales, cash shortages...).
+router.get(
+  "/risk",
+  requireFeature("analytics"),
+  requirePermission("analytics.view"),
+  asyncHandler(async (req, res) => {
+    res.json(await riskService.buildRiskReport(req.auth!.businessId, reportQuerySchema.parse(req.query)));
+  }),
+);
 // Returns journal — owner, accountant, registrar.
 router.get(
   "/returns",
