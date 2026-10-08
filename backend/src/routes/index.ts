@@ -22,6 +22,7 @@ import platformRoutes from "./platform.routes";
 import insightsRoutes from "./insights.routes";
 import assistantRoutes from "./assistant.routes";
 import publicRoutes from "./public.routes";
+import wholesaleRoutes from "./wholesale.routes";
 
 const router = Router();
 
@@ -48,5 +49,6 @@ router.use("/platform", platformRoutes);
 router.use("/insights", insightsRoutes);
 router.use("/assistant", assistantRoutes);
 router.use("/public", publicRoutes);
+router.use("/wholesale", wholesaleRoutes);
 
 export default router;

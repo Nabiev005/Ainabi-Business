@@ -40,6 +40,8 @@ export type Permission =
   | "tasks.manage"
   | "analytics.view"
   | "assistant.use"
+  | "wholesale.buy"
+  | "wholesale.sell"
   | "pipeline.view"
   | "pipeline.move"
   | "pipeline.configure"

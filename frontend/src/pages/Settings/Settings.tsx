@@ -13,6 +13,7 @@ import { ProductSetup } from "./ProductSetup";
 import { LocationsCard } from "./LocationsCard";
 import { CurrencyCard } from "./CurrencyCard";
 import { CatalogCard } from "./CatalogCard";
+import { WholesaleCard } from "./WholesaleCard";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -128,6 +129,8 @@ export default function Settings() {
       )}
 
       {sessionCan(session, "settings.business") && <CatalogCard />}
+
+      {sessionCan(session, "settings.business") && <WholesaleCard />}
 
       {sessionCan(session, "settings.products") && <CurrencyCard />}
 

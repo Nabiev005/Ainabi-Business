@@ -30,6 +30,7 @@ import {
   Lightbulb,
   Sparkles,
   ShieldAlert,
+  Handshake,
   Undo2,
   Hourglass,
   ChevronDown,
@@ -73,6 +74,7 @@ const NAV_ITEMS: Array<{
   { to: "/receiving", key: "receiving", icon: PackagePlus, group: "catalog", show: (s) => can(s, "stock.receive"), feature: "receiving" },
   { to: "/inventory", key: "inventory", icon: ClipboardCheck, group: "catalog", show: (s) => can(s, "stock.inventory"), feature: "inventory" },
   { to: "/stale", key: "stale", icon: Hourglass, group: "catalog", show: (s) => can(s, "stock.stale") },
+  { to: "/wholesale", key: "wholesale", icon: Handshake, group: "catalog", show: (s) => can(s, "wholesale.buy") },
 
   { to: "/customers", key: "customers", icon: Users, group: "money", show: (s) => can(s, "customers.view") },
   { to: "/debts", key: "debts", icon: Wallet, group: "money", show: (s) => can(s, "debts.view") },

@@ -115,6 +115,10 @@ model Business {
   catalogWhatsapp    String? // where "order" buttons send the customer
   catalogShowStock   Boolean          @default(false)
   catalogNote        String? // delivery / pickup info shown on the page
+  // Wholesale network: this business sells to other Ainabi shops. Its
+  // products with a wholesale price and stock are visible to them.
+  wholesaleEnabled   Boolean          @default(false)
+  wholesaleNote      String? // minimum order, delivery terms
   // Subscription (see src/config/plans.ts). Past planExpiresAt the business
   // is read-only until the platform admin records a payment and extends it.
   plan               SubscriptionPlan @default(PRO)
@@ -152,6 +156,8 @@ model Business {
 
   employees            Employee[]
   assistantUsage       AssistantUsage[]
+  wholesaleBuying      WholesaleOrder[]      @relation("WholesaleBuyer")
+  wholesaleSelling     WholesaleOrder[]      @relation("WholesaleSeller")
   categories           Category[]
   products             Product[]
   customers            Customer[]
@@ -1162,4 +1168,54 @@ model ExchangeRate {
   createdAt DateTime @default(now())
 
   @@map("exchange_rates")
+}
+
+enum WholesaleOrderStatus {
+  NEW // buyer sent it
+  ACCEPTED // seller confirmed
+  SHIPPED // seller sent the goods
+  RECEIVED // buyer got them
+  REJECTED // seller declined
+  CANCELLED // buyer withdrew it
+}
+
+// An order one Ainabi shop places with a wholesaler on the network.
+model WholesaleOrder {
+  id               String               @id @default(cuid())
+  buyerBusinessId  String
+  buyerBusiness    Business             @relation("WholesaleBuyer", fields: [buyerBusinessId], references: [id], onDelete: Cascade)
+  sellerBusinessId String
+  sellerBusiness   Business             @relation("WholesaleSeller", fields: [sellerBusinessId], references: [id], onDelete: Cascade)
+  status           WholesaleOrderStatus @default(NEW)
+  total            Decimal              @db.Decimal(12, 2)
+  comment          String? // from the buyer
+  sellerNote       String? // from the seller (why rejected, delivery time...)
+  createdByName    String
+  // The seller's sale / the buyer's receipt, when they were recorded from the order.
+  saleId           String?
+  receiptId        String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  items WholesaleOrderItem[]
+
+  @@index([buyerBusinessId, createdAt])
+  @@index([sellerBusinessId, status])
+  @@map("wholesale_orders")
+}
+
+model WholesaleOrderItem {
+  id        String         @id @default(cuid())
+  orderId   String
+  order     WholesaleOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // The seller's product; name/barcode/price are copied so the order reads the same later.
+  productId String
+  name      String
+  barcode   String?
+  unit      String
+  price     Decimal        @db.Decimal(12, 2)
+  quantity  Decimal        @db.Decimal(12, 3)
+
+  @@index([orderId])
+  @@map("wholesale_order_items")
 }

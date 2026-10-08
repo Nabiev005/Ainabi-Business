@@ -87,6 +87,10 @@ export const PERMISSIONS = {
   // Add / rename / reorder / delete the stages themselves.
   "pipeline.configure": MANAGEMENT,
 
+  // Wholesale network: order from other shops / handle orders from them.
+  "wholesale.buy": ["OWNER", "ADMIN", "REGISTRAR"],
+  "wholesale.sell": MANAGEMENT,
+
   "settings.business": ["OWNER"],
   "settings.products": MANAGEMENT,
 } as const satisfies Record<string, readonly Role[]>;
