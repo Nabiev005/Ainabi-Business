@@ -1297,6 +1297,54 @@
       "comment": "Комментарий",
       "commentPlaceholder": "Дополнительная информация",
       "submit": "Принять оплату"
+    },
+    "summaryOverdue": "Просрочено",
+    "tabRemind": "Напомнить",
+    "remindEmpty": "Сегодня напоминать некому",
+    "remindEmptySubtitle": "Здесь появятся просроченные долги и те, что нужно оплатить в ближайшие 3 дня.",
+    "dueColumn": "Срок",
+    "noDue": "Без срока",
+    "overdueDays": "Просрочено на {{count}} дн.",
+    "dueSoon": "Скоро",
+    "remind": "Напомнить в WhatsApp",
+    "reminded": "Напомнили: {{date}}",
+    "noPhone": "У клиента нет телефона",
+    "schedule": "График",
+    "plan": {
+      "label": "Срок оплаты",
+      "none": "Без срока",
+      "single": "Одной датой",
+      "installments": "Рассрочка",
+      "dueDate": "Дата оплаты",
+      "count": "Сколько платежей",
+      "firstDueDate": "Дата первого платежа",
+      "interval": "Каждые N месяцев",
+      "preview": "{{count}} платеж(а/ей) × ~{{amount}}"
+    },
+    "detail": {
+      "title": "Долг: {{name}}",
+      "schedule": "График платежей",
+      "noSchedule": "График не задан.",
+      "changePlan": "Изменить график",
+      "savePlan": "Сохранить график",
+      "planSaved": "График сохранён",
+      "payments": "Платежи",
+      "noPayments": "Платежей пока нет.",
+      "states": {
+        "PAID": "Оплачен",
+        "PARTIAL": "Частично",
+        "OVERDUE": "Просрочен",
+        "DUE_SOON": "Скоро",
+        "UPCOMING": "Ожидается"
+      }
+    },
+    "message": {
+      "greeting": "Здравствуйте, {{name}}!",
+      "intro": "Напоминание от магазина «{{shop}}»: ваш долг {{amount}}.",
+      "overdue": "Срок оплаты был {{date}} (просрочено на {{days}} дн.), к оплате: {{due}}.",
+      "soon": "Следующий платёж: {{date}}, {{due}}.",
+      "pay": "Оплатить можно: {{info}}",
+      "thanks": "Спасибо!"
     }
   },
   "suppliers": {

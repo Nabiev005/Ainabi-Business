@@ -533,10 +533,16 @@ model Debt {
   remainingAmount Decimal    @db.Decimal(12, 2)
   status          DebtStatus @default(OPEN)
   comment         String?
+  // Single due date ("YYYY-MM-DD", shop's local day) when there's no
+  // installment plan. With a plan, the dates live in `installments`.
+  dueDate         String?
+  // When someone last sent this customer a reminder (WhatsApp link).
+  lastRemindedAt  DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  payments DebtPayment[]
+  payments     DebtPayment[]
+  installments DebtInstallment[]
 
   @@index([businessId])
   @@index([customerId])
@@ -1115,4 +1121,18 @@ model AssistantUsage {
 
   @@unique([businessId, day])
   @@map("assistant_usage")
+}
+
+// One payment of an installment plan (насыя). Payments made on the debt
+// cover installments in date order — see services/installments.ts.
+model DebtInstallment {
+  id       String  @id @default(cuid())
+  debtId   String
+  debt     Debt    @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  dueDate  String // "YYYY-MM-DD"
+  amount   Decimal @db.Decimal(12, 2)
+  position Int
+
+  @@index([debtId])
+  @@map("debt_installments")
 }

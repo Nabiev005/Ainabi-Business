@@ -1297,6 +1297,54 @@
       "comment": "Комментарий",
       "commentPlaceholder": "Кошумча маалымат",
       "submit": "Төлөмдү кабыл алуу"
+    },
+    "summaryOverdue": "Мөөнөтү өткөн",
+    "tabRemind": "Эскертүү керек",
+    "remindEmpty": "Бүгүн эскерте турган карыз жок",
+    "remindEmptySubtitle": "Мөөнөтү өткөн же 3 күндүн ичинде төлөнүшү керек болгон карыздар бул жерде чыгат.",
+    "dueColumn": "Мөөнөтү",
+    "noDue": "Мөөнөтү жок",
+    "overdueDays": "{{count}} күн өттү",
+    "dueSoon": "Жакында",
+    "remind": "WhatsApp эскертүү",
+    "reminded": "Эскертилди: {{date}}",
+    "noPhone": "Кардардын телефону жок",
+    "schedule": "График",
+    "plan": {
+      "label": "Төлөө мөөнөтү",
+      "none": "Мөөнөтсүз",
+      "single": "Бир күнү",
+      "installments": "Бөлүп төлөө (насыя)",
+      "dueDate": "Төлөй турган күнү",
+      "count": "Канча төлөм",
+      "firstDueDate": "Биринчи төлөм күнү",
+      "interval": "Ар канча айда",
+      "preview": "{{count}} төлөм × ~{{amount}}"
+    },
+    "detail": {
+      "title": "Карыз: {{name}}",
+      "schedule": "Төлөм графиги",
+      "noSchedule": "График коюлган эмес.",
+      "changePlan": "Графикти өзгөртүү",
+      "savePlan": "Графикти сактоо",
+      "planSaved": "График сакталды",
+      "payments": "Төлөмдөр",
+      "noPayments": "Азырынча төлөм жок.",
+      "states": {
+        "PAID": "Төлөндү",
+        "PARTIAL": "Жарым-жартылай",
+        "OVERDUE": "Мөөнөтү өттү",
+        "DUE_SOON": "Жакында",
+        "UPCOMING": "Күтүлүүдө"
+      }
+    },
+    "message": {
+      "greeting": "Саламатсызбы, {{name}}!",
+      "intro": "«{{shop}}» дүкөнүнөн эскертүү: сиздин карызыңыз {{amount}}.",
+      "overdue": "Төлөм мөөнөтү {{date}} болчу ({{days}} күн өттү), төлөнө турган сумма: {{due}}.",
+      "soon": "Кийинки төлөм: {{date}}, {{due}}.",
+      "pay": "Төлөө үчүн: {{info}}",
+      "thanks": "Рахмат!"
     }
   },
   "suppliers": {

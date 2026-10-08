@@ -528,6 +528,29 @@ export interface Debt {
   status: DebtStatus;
   comment: string | null;
   createdAt: string;
+  saleId: string | null;
+  installmentsCount: number;
+  /** Next unpaid due date ("YYYY-MM-DD") and what's left of it. */
+  nextDueDate: string | null;
+  nextDueAmount: number | null;
+  overdueAmount: number;
+  daysOverdue: number;
+  needsReminder: boolean;
+  lastRemindedAt: string | null;
+}
+
+export type InstallmentState = "PAID" | "PARTIAL" | "OVERDUE" | "DUE_SOON" | "UPCOMING";
+
+export interface DebtDetail extends Debt {
+  dueDate: string | null;
+  schedule: { dueDate: string; amount: number; paid: number; state: InstallmentState }[];
+  payments: { id: string; amount: number; method: PaymentMethod; comment: string | null; createdAt: string }[];
+}
+
+/** One due date, an installment plan, or nothing. */
+export interface DebtSchedulePayload {
+  dueDate?: string | null;
+  installments?: { count: number; firstDueDate: string; intervalMonths: number } | null;
 }
 
 export interface Supplier {

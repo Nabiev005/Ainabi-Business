@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
-import { createDebtPaymentSchema, createDebtSchema } from "../validators/debt.validator";
+import { createDebtPaymentSchema, createDebtSchema, debtScheduleSchema } from "../validators/debt.validator";
 import * as debtService from "../services/debt.service";
 
 export const listHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -23,4 +23,22 @@ export const addPaymentHandler = asyncHandler(async (req: Request, res: Response
   const input = createDebtPaymentSchema.parse(req.body);
   const payment = await debtService.addPayment(req.auth!.businessId, req.params.id, input, req.auth!.employeeId);
   res.status(201).json(payment);
+});
+
+export const remindersHandler = asyncHandler(async (req: Request, res: Response) => {
+  res.json(await debtService.listReminders(req.auth!.businessId));
+});
+
+export const getHandler = asyncHandler(async (req: Request, res: Response) => {
+  res.json(await debtService.getDebt(req.auth!.businessId, req.params.id));
+});
+
+export const scheduleHandler = asyncHandler(async (req: Request, res: Response) => {
+  const input = debtScheduleSchema.parse(req.body);
+  res.json(await debtService.setSchedule(req.auth!.businessId, req.params.id, input));
+});
+
+export const remindedHandler = asyncHandler(async (req: Request, res: Response) => {
+  await debtService.markReminded(req.auth!.businessId, req.params.id);
+  res.status(204).send();
 });
