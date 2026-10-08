@@ -42,6 +42,7 @@ const Pipeline = lazy(() => import("./pages/Pipeline/Pipeline"));
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
 const Assistant = lazy(() => import("./pages/Assistant/Assistant"));
 const Risk = lazy(() => import("./pages/Risk/Risk"));
+const Catalog = lazy(() => import("./pages/Catalog/Catalog"));
 const Insights = lazy(() => import("./pages/Insights/Insights"));
 const Returns = lazy(() => import("./pages/Returns/Returns"));
 const Stale = lazy(() => import("./pages/Stale/Stale"));
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/c/:slug" element={<Catalog />} />
               <Route path="/terms" element={<Terms />} />
 
               <Route element={<ProtectedRoute />}>

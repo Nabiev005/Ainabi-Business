@@ -21,6 +21,7 @@ import billingRoutes from "./billing.routes";
 import platformRoutes from "./platform.routes";
 import insightsRoutes from "./insights.routes";
 import assistantRoutes from "./assistant.routes";
+import publicRoutes from "./public.routes";
 
 const router = Router();
 
@@ -46,5 +47,6 @@ router.use("/billing", billingRoutes);
 router.use("/platform", platformRoutes);
 router.use("/insights", insightsRoutes);
 router.use("/assistant", assistantRoutes);
+router.use("/public", publicRoutes);
 
 export default router;

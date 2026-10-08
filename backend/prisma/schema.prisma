@@ -109,6 +109,12 @@ model Business {
   usdRateAuto        Boolean          @default(true)
   // Som prices derived from dollars are rounded up to this step (1, 5, 10, 50, 100).
   priceRounding      Int              @default(10)
+  // Public shop window at /c/<catalogSlug> — the link for the Instagram bio.
+  catalogEnabled     Boolean          @default(false)
+  catalogSlug        String?          @unique
+  catalogWhatsapp    String? // where "order" buttons send the customer
+  catalogShowStock   Boolean          @default(false)
+  catalogNote        String? // delivery / pickup info shown on the page
   // Subscription (see src/config/plans.ts). Past planExpiresAt the business
   // is read-only until the platform admin records a payment and extends it.
   plan               SubscriptionPlan @default(PRO)
