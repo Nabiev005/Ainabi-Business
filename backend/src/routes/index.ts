@@ -23,6 +23,7 @@ import insightsRoutes from "./insights.routes";
 import assistantRoutes from "./assistant.routes";
 import publicRoutes from "./public.routes";
 import wholesaleRoutes from "./wholesale.routes";
+import telegramRoutes from "./telegram.routes";
 
 const router = Router();
 
@@ -50,5 +51,6 @@ router.use("/insights", insightsRoutes);
 router.use("/assistant", assistantRoutes);
 router.use("/public", publicRoutes);
 router.use("/wholesale", wholesaleRoutes);
+router.use("/telegram", telegramRoutes);
 
 export default router;

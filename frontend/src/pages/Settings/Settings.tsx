@@ -14,6 +14,7 @@ import { LocationsCard } from "./LocationsCard";
 import { CurrencyCard } from "./CurrencyCard";
 import { CatalogCard } from "./CatalogCard";
 import { WholesaleCard } from "./WholesaleCard";
+import { TelegramCard } from "./TelegramCard";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -127,6 +128,8 @@ export default function Settings() {
           }}
         />
       )}
+
+      {(sessionCan(session, "reports.view") || sessionCan(session, "wholesale.sell")) && <TelegramCard />}
 
       {sessionCan(session, "settings.business") && <CatalogCard />}
 

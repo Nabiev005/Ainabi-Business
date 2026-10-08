@@ -33,5 +33,11 @@
         "service": "frontend"
       }
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/telegram/cron/daily",
+      "schedule": "0 15 * * *"
+    }
   ]
 }

@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError";
 import { round2, toNumber } from "../utils/money";
 import { findOpenShift, resolveLocationId } from "../utils/stockLedger";
 import { hasPermission, Role } from "../config/permissions";
+import { notifyCashShort } from "./telegram.service";
 
 /**
  * Everything that moved cash in or out of the drawer during a shift. The
@@ -117,7 +118,9 @@ export async function closeShift(businessId: string, employeeId: string, role: R
       note: note || null,
     },
   });
-  return serializeShift(shiftId);
+  const result = await serializeShift(shiftId);
+  if (countedCash < expectedCash - 0.5) await notifyCashShort(businessId, result.employeeName ?? "—", round2(expectedCash - countedCash));
+  return result;
 }
 
 export async function addCashMovement(

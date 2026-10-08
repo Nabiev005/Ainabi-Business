@@ -207,19 +207,25 @@ enum EmployeeStatus {
 // "team member" record used on the Employees page and the
 // authorization anchor for every request (req.businessId / req.role).
 model Employee {
-  id          String         @id @default(cuid())
-  userId      String
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessId  String
-  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  role        EmployeeRole   @default(CASHIER)
-  status      EmployeeStatus @default(ACTIVE)
-  lastLoginAt DateTime?
+  id                    String         @id @default(cuid())
+  userId                String
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId            String
+  business              Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  role                  EmployeeRole   @default(CASHIER)
+  status                EmployeeStatus @default(ACTIVE)
+  lastLoginAt           DateTime?
   // Branch / warehouse this employee works at (null = the default one).
-  locationId  String?
-  location    Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  locationId            String?
+  location              Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  // Telegram bot link: the private chat reports/alerts go to, and the
+  // one-time /start code used to link it.
+  telegramChatId        String?
+  telegramLang          String?
+  telegramLinkCode      String?        @unique
+  telegramLinkExpiresAt DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   sales            Sale[]
   stockMovements   StockMovement[]

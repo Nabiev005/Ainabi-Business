@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { createHash } from "crypto";
 
 const nodeEnv = process.env.NODE_ENV ?? "development";
 export const isProduction = nodeEnv === "production";
@@ -60,6 +61,15 @@ export const env = {
     apiKey: (process.env.ANTHROPIC_API_KEY ?? "").trim(),
     // Questions per business per day — keeps the API bill predictable.
     dailyLimit: Number(process.env.ASSISTANT_DAILY_LIMIT ?? 40),
+  },
+  // Telegram bot for owners (reports, alerts, questions). No token = off.
+  telegram: {
+    token: (process.env.TELEGRAM_BOT_TOKEN ?? "").trim(),
+    username: (process.env.TELEGRAM_BOT_USERNAME ?? "ainabi_business_bot").trim().replace(/^@/, ""),
+    // Telegram echoes this on every webhook call. Derived from the token unless set.
+    webhookSecret: (process.env.TELEGRAM_WEBHOOK_SECRET ?? "").trim() || createHash("sha256").update(`webhook:${process.env.TELEGRAM_BOT_TOKEN ?? ""}`).digest("hex").slice(0, 48),
+    // Vercel Cron sends "Authorization: Bearer $CRON_SECRET".
+    cronSecret: (process.env.CRON_SECRET ?? "").trim(),
   },
   mail: {
     resendApiKey: (process.env.RESEND_API_KEY ?? "").trim(),

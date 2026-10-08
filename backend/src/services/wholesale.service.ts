@@ -7,6 +7,7 @@ import { createSale } from "./sale.service";
 import { createReceipt } from "./stock.service";
 import { createReceiptSchema } from "../validators/stock.validator";
 import type { CreateWholesaleOrderInput, WholesaleStatusInput } from "../validators/wholesale.validator";
+import { notifyWholesaleOrder } from "./telegram.service";
 
 /**
  * Wholesale network between Ainabi shops. A wholesaler switches it on and
@@ -145,6 +146,7 @@ export async function createOrder(businessId: string, employeeId: string, input:
     },
     include: orderInclude,
   });
+  await notifyWholesaleOrder(order.sellerBusinessId, order.buyerBusiness.name, toNumber(order.total));
   return serialize(order, businessId);
 }
 
