@@ -177,6 +177,9 @@ export interface Product {
   prescriptionRequired: boolean;
   scaleCode: string | null;
   wholesalePrice: number | null;
+  /** Set = priced in dollars; som prices follow the USD rate. */
+  usdPurchasePrice?: number | null;
+  usdSalePrice?: number | null;
   variantGroupId: string | null;
   variantGroupName: string | null;
   variantLabel: string | null;

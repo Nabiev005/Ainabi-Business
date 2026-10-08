@@ -102,6 +102,13 @@ model Business {
   // Monthly sales target (revenue). The statistics page forecasts how much
   // of it the month will reach at the current pace. Null = no plan set.
   monthlyRevenuePlan Decimal?         @db.Decimal(14, 2)
+  // USD rate dollar-priced products are re-priced with. Automatic = НБКР's
+  // rate, refreshed once a day; otherwise the owner types it in.
+  usdRate            Decimal?         @db.Decimal(10, 4)
+  usdRateDate        String? // "YYYY-MM-DD" the rate was last applied
+  usdRateAuto        Boolean          @default(true)
+  // Som prices derived from dollars are rounded up to this step (1, 5, 10, 50, 100).
+  priceRounding      Int              @default(10)
   // Subscription (see src/config/plans.ts). Past planExpiresAt the business
   // is read-only until the platform admin records a payment and extends it.
   plan               SubscriptionPlan @default(PRO)
@@ -263,6 +270,10 @@ model Product {
   sku                  String?
   barcode              String?
   purchasePrice        Decimal              @db.Decimal(12, 2)
+  // Dollar-priced goods: when usdSalePrice is set, salePrice (and
+  // purchasePrice, if usdPurchasePrice is set) follow the business's USD rate.
+  usdPurchasePrice     Decimal?             @db.Decimal(12, 2)
+  usdSalePrice         Decimal?             @db.Decimal(12, 2)
   salePrice            Decimal              @db.Decimal(12, 2)
   quantity             Decimal              @default(0) @db.Decimal(12, 3)
   minQuantity          Decimal              @default(0) @db.Decimal(12, 3)
@@ -1135,4 +1146,14 @@ model DebtInstallment {
 
   @@index([debtId])
   @@map("debt_installments")
+}
+
+// НБКР's USD rate, fetched at most once a day for the whole platform.
+model ExchangeRate {
+  day       String   @id // our local day it was fetched for
+  usd       Decimal  @db.Decimal(10, 4)
+  nbkrDate  String // the date НБКР published it for
+  createdAt DateTime @default(now())
+
+  @@map("exchange_rates")
 }

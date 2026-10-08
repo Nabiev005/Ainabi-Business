@@ -66,3 +66,9 @@ export function parseProductFields(value: unknown): ProductFieldDef[] {
   const parsed = productFieldsSchema.safeParse(value);
   return parsed.success ? parsed.data : [];
 }
+
+export const currencySettingsSchema = z.object({
+  usdRateAuto: z.boolean(),
+  usdRate: z.coerce.number().positive("Курс 0дон чоң болушу керек").max(10000).optional().nullable(),
+  priceRounding: z.coerce.number().int().refine((v) => [1, 5, 10, 50, 100].includes(v), "Тегеректөө туура эмес"),
+});

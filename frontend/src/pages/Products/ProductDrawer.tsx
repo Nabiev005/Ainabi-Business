@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as currencyService from "../../services/currency.service";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,6 +40,8 @@ export interface ProductFormValues {
   purchasePrice: number;
   salePrice: number;
   wholesalePrice?: number | null;
+  usdPurchasePrice?: number | null;
+  usdSalePrice?: number | null;
   quantity: number;
   minQuantity: number;
   unit: ProductUnit;
@@ -110,6 +113,8 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [imageProcessing, setImageProcessing] = useState(false);
+  const [inUsd, setInUsd] = useState(false);
+  const [usdRate, setUsdRate] = useState<{ rate: number; step: number } | null>(null);
   const [packages, setPackages] = useState<ProductPackage[]>([]);
   const { session } = useAuth();
   const business = session?.business;
@@ -131,6 +136,8 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
           purchasePrice: z.coerce.number().nonnegative(t("products.drawer.purchasePriceRequired")),
           salePrice: z.coerce.number().nonnegative(t("products.drawer.salePriceRequired")),
           wholesalePrice: z.preprocess(emptyToNull, z.coerce.number().nonnegative().nullable()),
+          usdPurchasePrice: z.preprocess(emptyToNull, z.coerce.number().nonnegative().nullable()),
+          usdSalePrice: z.preprocess(emptyToNull, z.coerce.number().nonnegative().nullable()),
           quantity: z.coerce.number().nonnegative(),
           minQuantity: z.coerce.number().nonnegative(),
           unit: z.enum(["PIECE", "KG", "GRAM", "LITER", "METER", "PACK", "BOX"]),
@@ -191,6 +198,7 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
       // manual-URL field by default when the existing value is a real link.
       setShowUrlInput(!!product?.imageUrl && !product.imageUrl.startsWith("data:"));
       setPackages(product?.packages ?? []);
+      setInUsd(product?.usdSalePrice != null);
       reset(
         product
           ? {
@@ -201,6 +209,8 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
               purchasePrice: product.purchasePrice,
               salePrice: product.salePrice,
               wholesalePrice: product.wholesalePrice,
+              usdPurchasePrice: product.usdPurchasePrice ?? null,
+              usdSalePrice: product.usdSalePrice ?? null,
               quantity: product.quantity,
               minQuantity: product.minQuantity,
               unit: product.unit,
@@ -229,10 +239,24 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
     }
   }, [open, product, reset, trackSerials, initialBarcode]);
 
+  useEffect(() => {
+    if (!open || !inUsd || usdRate) return;
+    currencyService
+      .getCurrency()
+      .then((c) => {
+        const rate = c.usdRate ?? c.nbkrRate;
+        if (rate) setUsdRate({ rate, step: c.priceRounding });
+      })
+      .catch(() => undefined);
+  }, [open, inUsd, usdRate]);
+
   const submit = handleSubmit((values) => {
     const cleanPackages = packages.filter((p) => p.name.trim() && p.factor > 0);
     return onSubmit({
       ...values,
+      // The server derives the som prices from the dollar ones.
+      usdPurchasePrice: inUsd ? (values.usdPurchasePrice ?? null) : null,
+      usdSalePrice: inUsd ? (values.usdSalePrice ?? null) : null,
       quantity: hideInitialStock ? 0 : values.quantity,
       attributes: normalizeAttributes(productFields, values.attributes),
       requiresSerial: trackSerials ? !!values.requiresSerial : false,
@@ -244,6 +268,16 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
       initialBatchNumber: !product && trackExpiry ? values.initialBatchNumber || null : null,
     });
   });
+
+  const [usdPurchase, usdSale] = watch(["usdPurchasePrice", "usdSalePrice"]);
+  // Preview of the som prices; the server recomputes them with the same rate and rounding.
+  useEffect(() => {
+    if (!inUsd || !usdRate) return;
+    const sale = Number(usdSale);
+    const purchase = Number(usdPurchase);
+    if (sale > 0) setValue("salePrice", Math.ceil((sale * usdRate.rate) / usdRate.step - 1e-9) * usdRate.step);
+    if (purchase > 0) setValue("purchasePrice", Math.round(purchase * usdRate.rate * 100) / 100);
+  }, [inUsd, usdRate, usdSale, usdPurchase, setValue]);
 
   const [purchasePrice, salePrice, skuValue, barcodeValue, imageUrlValue, unitValue, quantityValue] = watch([
     "purchasePrice",
@@ -352,15 +386,35 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
           </div>
         </div>
 
+        <label className="row gap-2" style={{ cursor: "pointer", fontSize: "var(--font-size-sm)" }}>
+          <input type="checkbox" checked={inUsd} onChange={(e) => setInUsd(e.target.checked)} />
+          <span>{t("products.drawer.priceInUsd")}</span>
+          {inUsd && usdRate && <span className="text-muted">— 1 $ = {usdRate.rate} {t("products.drawer.som")}</span>}
+        </label>
+
+        {inUsd && (
+          <div className="form-grid">
+            <div className="field">
+              <label className="field-label">{t("products.drawer.usdPurchasePrice")}</label>
+              <input type="number" step="0.01" min={0} className="input" placeholder="$" {...register("usdPurchasePrice")} />
+            </div>
+            <div className="field">
+              <label className="field-label">{t("products.drawer.usdSalePrice")}</label>
+              <input type="number" step="0.01" min={0} className="input" placeholder="$" {...register("usdSalePrice")} required />
+              <span className="field-hint">{t("products.drawer.usdHint")}</span>
+            </div>
+          </div>
+        )}
+
         <div className="form-grid">
           <div className="field">
             <label className="field-label">{t("products.drawer.purchasePrice")}</label>
-            <input type="number" step="0.01" className={`input ${errors.purchasePrice ? "has-error" : ""}`} {...register("purchasePrice")} />
+            <input type="number" step="0.01" readOnly={inUsd && Number(usdPurchase) > 0} className={`input ${errors.purchasePrice ? "has-error" : ""}`} {...register("purchasePrice")} />
             {errors.purchasePrice && <span className="field-error">{errors.purchasePrice.message}</span>}
           </div>
           <div className="field">
             <label className="field-label">{t("products.drawer.salePrice")}</label>
-            <input type="number" step="0.01" className={`input ${errors.salePrice ? "has-error" : ""}`} {...register("salePrice")} />
+            <input type="number" step="0.01" readOnly={inUsd} className={`input ${errors.salePrice ? "has-error" : ""}`} {...register("salePrice")} />
             {errors.salePrice && <span className="field-error">{errors.salePrice.message}</span>}
           </div>
         </div>

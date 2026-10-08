@@ -11,6 +11,7 @@ import { extractErrorMessage } from "../../services/api";
 import type { Business } from "../../types";
 import { ProductSetup } from "./ProductSetup";
 import { LocationsCard } from "./LocationsCard";
+import { CurrencyCard } from "./CurrencyCard";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -124,6 +125,8 @@ export default function Settings() {
           }}
         />
       )}
+
+      {sessionCan(session, "settings.products") && <CurrencyCard />}
 
       {sessionCan(session, "settings.products") && <LocationsCard />}
 

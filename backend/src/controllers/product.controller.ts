@@ -10,21 +10,28 @@ import {
   variantGroupSchema,
 } from "../validators/product.validator";
 import * as productService from "../services/product.service";
+import { ensureFreshPrices } from "../services/currency.service";
 import { hasPermission } from "../config/permissions";
 
 const locationQuery = z.object({ locationId: z.string().optional() });
 
 /** Roles without "costs.view" (the cashier) never receive the purchase
  * price or anything derived from it. */
-function forViewer<T extends { purchasePrice?: unknown; profit?: unknown; marginPercent?: unknown }>(req: Request, product: T) {
+function forViewer<T extends { purchasePrice?: unknown; usdPurchasePrice?: unknown; profit?: unknown; marginPercent?: unknown }>(req: Request, product: T) {
   if (hasPermission(req.auth!.role, "costs.view")) return product;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { purchasePrice, profit, marginPercent, ...rest } = product;
+  const { purchasePrice, usdPurchasePrice, profit, marginPercent, ...rest } = product;
   return rest;
+}
+
+/** Dollar-priced goods follow today's rate; a failure here must never block selling. */
+export async function refreshPrices(businessId: string) {
+  await ensureFreshPrices(businessId).catch((error) => console.error("Price refresh failed:", error));
 }
 
 export const listHandler = asyncHandler(async (req: Request, res: Response) => {
   const query = productQuerySchema.parse(req.query);
+  await refreshPrices(req.auth!.businessId);
   const result = await productService.listProducts(req.auth!.businessId, query);
   res.json({ ...result, items: result.items.map((p) => forViewer(req, p)) });
 });
@@ -37,6 +44,7 @@ export const getHandler = asyncHandler(async (req: Request, res: Response) => {
 
 export const getByBarcodeHandler = asyncHandler(async (req: Request, res: Response) => {
   const { locationId } = locationQuery.parse(req.query);
+  await refreshPrices(req.auth!.businessId);
   const product = await productService.findByBarcode(req.auth!.businessId, req.params.barcode, locationId);
   res.json(forViewer(req, product));
 });
