@@ -5,6 +5,7 @@ import { SkeletonRows } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { useToast } from "../../hooks/useToast";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import * as billingService from "../../services/billing.service";
@@ -32,6 +33,8 @@ export default function Platform() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  // One-click actions: renew the current plan for a month, or stop the business now.
+  const [quick, setQuick] = useState<{ kind: "renew" | "block"; business: PlatformBusiness } | null>(null);
 
   const load = useCallback(() => {
     setRows(null);
@@ -58,6 +61,28 @@ export default function Platform() {
   useEffect(() => {
     loadPayments();
   }, [loadPayments]);
+
+  async function runQuick() {
+    if (!quick) return;
+    const b = quick.business;
+    setSaving(true);
+    try {
+      if (quick.kind === "renew") {
+        const sub = await billingService.recordPayment(b.id, { plan: b.subscription.plan, months: 1, amount: priceOf(b.subscription.plan, 1), note: null });
+        showToast({ variant: "success", title: t("platform.saved"), message: t("platform.savedMessage", { name: b.name, date: sub.expiresAt ? formatDate(sub.expiresAt) : "—" }) });
+      } else {
+        await billingService.blockBusiness(b.id);
+        showToast({ variant: "success", title: t("platform.blocked", { name: b.name }) });
+      }
+      setQuick(null);
+      load();
+      loadPayments();
+    } catch (error) {
+      showToast({ variant: "error", title: t("common.saveFailed"), message: extractErrorMessage(error) });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function open(b: PlatformBusiness) {
     setTarget(b);
@@ -254,9 +279,21 @@ export default function Platform() {
                       {b.lastSaleAt ? formatDateTime(b.lastSaleAt) : "—"}
                     </td>
                     <td>
-                      <button className="btn btn-primary btn-sm" onClick={() => open(b)}>
-                        {t("platform.recordPayment")}
-                      </button>
+                      <div className="stack gap-1" style={{ alignItems: "stretch", minWidth: 150 }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => setQuick({ kind: "renew", business: b })}>
+                          {t("platform.renewMonth", { amount: formatMoney(priceOf(b.subscription.plan, 1)) })}
+                        </button>
+                        <div className="row gap-1">
+                          <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => open(b)}>
+                            {t("platform.otherPayment")}
+                          </button>
+                          {b.subscription.active && (
+                            <button className="btn btn-ghost btn-sm" style={{ color: "var(--color-danger-text)" }} onClick={() => setQuick({ kind: "block", business: b })}>
+                              {t("platform.block")}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -267,6 +304,30 @@ export default function Platform() {
       </div>
 
       )}
+      <ConfirmDialog
+        open={!!quick}
+        danger={quick?.kind === "block"}
+        loading={saving}
+        title={
+          quick?.kind === "block"
+            ? t("platform.blockTitle", { name: quick.business.name })
+            : t("platform.renewTitle", { name: quick?.business.name ?? "" })
+        }
+        description={
+          quick?.kind === "block"
+            ? t("platform.blockText")
+            : quick
+              ? t("platform.renewText", {
+                  plan: t(`billing.plans.${quick.business.subscription.plan}.name`),
+                  amount: formatMoney(priceOf(quick.business.subscription.plan, 1)),
+                })
+              : ""
+        }
+        confirmLabel={quick?.kind === "block" ? t("platform.block") : t("platform.renewConfirm")}
+        onConfirm={runQuick}
+        onCancel={() => setQuick(null)}
+      />
+
       <Modal open={!!target} onClose={() => setTarget(null)}>
         {target && (
           <form

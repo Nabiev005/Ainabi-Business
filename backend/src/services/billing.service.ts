@@ -166,3 +166,15 @@ export async function recordPayment(
     return subscriptionInfo(updated);
   });
 }
+
+/**
+ * Stops a business right away (e.g. the month wasn't paid): its subscription
+ * ends now, so it drops to read-only exactly as if it had run out — data
+ * stays, nothing can be changed. A payment recorded later turns it back on.
+ */
+export async function blockBusiness(businessId: string) {
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business) throw ApiError.notFound("Бизнес табылган жок.");
+  const updated = await prisma.business.update({ where: { id: businessId }, data: { planExpiresAt: new Date(Date.now() - 1000) } });
+  return subscriptionInfo(updated);
+}
