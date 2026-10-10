@@ -34,7 +34,7 @@ export default function Platform() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   // One-click actions: renew the current plan for a month, or stop the business now.
-  const [quick, setQuick] = useState<{ kind: "renew" | "block"; business: PlatformBusiness } | null>(null);
+  const [quick, setQuick] = useState<{ kind: "renew" | "block" | "free" | "unfree"; business: PlatformBusiness } | null>(null);
 
   const load = useCallback(() => {
     setRows(null);
@@ -70,9 +70,12 @@ export default function Platform() {
       if (quick.kind === "renew") {
         const sub = await billingService.recordPayment(b.id, { plan: b.subscription.plan, months: 1, amount: priceOf(b.subscription.plan, 1), note: null });
         showToast({ variant: "success", title: t("platform.saved"), message: t("platform.savedMessage", { name: b.name, date: sub.expiresAt ? formatDate(sub.expiresAt) : "—" }) });
-      } else {
+      } else if (quick.kind === "block") {
         await billingService.blockBusiness(b.id);
         showToast({ variant: "success", title: t("platform.blocked", { name: b.name }) });
+      } else {
+        await billingService.setComplimentary(b.id, quick.kind === "free");
+        showToast({ variant: "success", title: t(quick.kind === "free" ? "platform.freeDone" : "platform.unfreeDone", { name: b.name }) });
       }
       setQuick(null);
       load();
@@ -259,11 +262,17 @@ export default function Platform() {
                     <td>
                       <div className="row gap-1" style={{ flexWrap: "wrap" }}>
                         <Badge variant="neutral">{t(`billing.plans.${b.subscription.plan}.name`)}</Badge>
-                        {b.subscription.isTrial && <Badge variant="info">{t("billing.trial")}</Badge>}
+                        {b.subscription.complimentary ? (
+                          <Badge variant="success">{t("platform.free")}</Badge>
+                        ) : (
+                          b.subscription.isTrial && <Badge variant="info">{t("billing.trial")}</Badge>
+                        )}
                       </div>
                     </td>
                     <td>
-                      {b.subscription.active ? (
+                      {b.subscription.complimentary ? (
+                        <Badge variant="success">{t("platform.forever")}</Badge>
+                      ) : b.subscription.active ? (
                         <Badge variant={b.subscription.endingSoon ? "warning" : "success"}>
                           {b.subscription.expiresAt ? formatDate(b.subscription.expiresAt) : "—"} · {t("platform.daysLeft", { count: b.subscription.daysLeft })}
                         </Badge>
@@ -279,6 +288,11 @@ export default function Platform() {
                       {b.lastSaleAt ? formatDateTime(b.lastSaleAt) : "—"}
                     </td>
                     <td>
+                      {b.subscription.complimentary ? (
+                        <button className="btn btn-secondary btn-sm" onClick={() => setQuick({ kind: "unfree", business: b })}>
+                          {t("platform.unfree")}
+                        </button>
+                      ) : (
                       <div className="stack gap-1" style={{ alignItems: "stretch", minWidth: 150 }}>
                         <button className="btn btn-primary btn-sm" onClick={() => setQuick({ kind: "renew", business: b })}>
                           {t("platform.renewMonth", { amount: formatMoney(priceOf(b.subscription.plan, 1)) })}
@@ -293,7 +307,11 @@ export default function Platform() {
                             </button>
                           )}
                         </div>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setQuick({ kind: "free", business: b })}>
+                          {t("platform.makeFree")}
+                        </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -311,19 +329,29 @@ export default function Platform() {
         title={
           quick?.kind === "block"
             ? t("platform.blockTitle", { name: quick.business.name })
-            : t("platform.renewTitle", { name: quick?.business.name ?? "" })
+            : quick?.kind === "free"
+              ? t("platform.freeTitle", { name: quick.business.name })
+              : quick?.kind === "unfree"
+                ? t("platform.unfreeTitle", { name: quick.business.name })
+                : t("platform.renewTitle", { name: quick?.business.name ?? "" })
         }
         description={
           quick?.kind === "block"
             ? t("platform.blockText")
-            : quick
+            : quick?.kind === "free"
+              ? t("platform.freeText")
+              : quick?.kind === "unfree"
+                ? t("platform.unfreeText")
+                : quick
               ? t("platform.renewText", {
                   plan: t(`billing.plans.${quick.business.subscription.plan}.name`),
                   amount: formatMoney(priceOf(quick.business.subscription.plan, 1)),
                 })
               : ""
         }
-        confirmLabel={quick?.kind === "block" ? t("platform.block") : t("platform.renewConfirm")}
+        confirmLabel={
+          quick?.kind === "block" ? t("platform.block") : quick?.kind === "free" ? t("platform.makeFree") : quick?.kind === "unfree" ? t("platform.unfree") : t("platform.renewConfirm")
+        }
         onConfirm={runQuick}
         onCancel={() => setQuick(null)}
       />

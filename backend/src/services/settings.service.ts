@@ -73,8 +73,8 @@ export async function listLocations(businessId: string) {
 }
 
 export async function createLocation(businessId: string, input: LocationInput) {
-  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { plan: true } });
-  const max = PLANS[business.plan as PlanId].maxLocations;
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { plan: true, complimentary: true } });
+  const max = business.complimentary ? null : PLANS[business.plan as PlanId].maxLocations;
   if (max !== null) {
     // The default location always exists, so count it in.
     await getDefaultLocation(prisma, businessId);

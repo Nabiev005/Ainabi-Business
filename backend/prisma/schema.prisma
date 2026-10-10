@@ -124,6 +124,9 @@ model Business {
   plan               SubscriptionPlan @default(PRO)
   planExpiresAt      DateTime?
   isTrial            Boolean          @default(true)
+  // Free for good (the platform owner's own shop, partners): no expiry,
+  // every module, no limits. Set from the platform panel.
+  complimentary      Boolean          @default(false)
   // Which preset the owner picked ("PHONES", "LAPTOPS", "CLOTHING", ...) —
   // see src/config/businessTemplates.ts. Only a label; the actual behaviour
   // lives in the fields/flags below, which the owner can edit freely.

@@ -45,7 +45,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         role: true,
         status: true,
         user: { select: { mustChangePassword: true, email: true, googleId: true } },
-        business: { select: { plan: true, planExpiresAt: true, isTrial: true } },
+        business: { select: { plan: true, planExpiresAt: true, isTrial: true, complimentary: true } },
       },
     });
     if (!employee || employee.status !== "ACTIVE" || employee.businessId !== payload.businessId || employee.userId !== payload.userId) {

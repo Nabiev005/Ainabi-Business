@@ -6,6 +6,8 @@ export type Feature = "tasks" | "pipeline" | "analytics" | "repairs" | "receivin
 export interface SubscriptionInfo {
   plan: PlanId;
   isTrial: boolean;
+  /** Free for good — no expiry, no limits. */
+  complimentary?: boolean;
   expiresAt: string | null;
   active: boolean;
   daysLeft: number;
@@ -103,5 +105,11 @@ export async function recordPayment(
 /** Platform admin: end a business's subscription now (read-only until it pays). */
 export async function blockBusiness(businessId: string): Promise<SubscriptionInfo> {
   const { data } = await api.post<SubscriptionInfo>(`/platform/businesses/${businessId}/block`);
+  return data;
+}
+
+/** Platform admin: free for good (no expiry, every module, no limits). */
+export async function setComplimentary(businessId: string, complimentary: boolean): Promise<SubscriptionInfo> {
+  const { data } = await api.post<SubscriptionInfo>(`/platform/businesses/${businessId}/complimentary`, { complimentary });
   return data;
 }

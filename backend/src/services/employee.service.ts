@@ -6,8 +6,8 @@ import { env } from "../config/env";
 
 /** Throws when one more active employee would exceed the plan (owner not counted). */
 async function assertEmployeeLimit(businessId: string) {
-  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { plan: true } });
-  const max = PLANS[business.plan as PlanId].maxEmployees;
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { plan: true, complimentary: true } });
+  const max = business.complimentary ? null : PLANS[business.plan as PlanId].maxEmployees;
   if (max === null) return;
   const active = await prisma.employee.count({ where: { businessId, status: "ACTIVE", role: { not: "OWNER" } } });
   if (active >= max) {
