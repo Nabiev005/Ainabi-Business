@@ -44,6 +44,12 @@ router.get(
 );
 
 router.post(
+  "/businesses/:id/block",
+  asyncHandler(async (req, res) => {
+    res.json(await billingService.blockBusiness(req.params.id));
+  }),
+);
+router.post(
   "/businesses/:id/subscription",
   asyncHandler(async (req, res) => {
     const input = paymentSchema.parse(req.body);

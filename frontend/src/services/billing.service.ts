@@ -99,3 +99,9 @@ export async function recordPayment(
   const { data } = await api.post<SubscriptionInfo>(`/platform/businesses/${businessId}/subscription`, payload);
   return data;
 }
+
+/** Platform admin: end a business's subscription now (read-only until it pays). */
+export async function blockBusiness(businessId: string): Promise<SubscriptionInfo> {
+  const { data } = await api.post<SubscriptionInfo>(`/platform/businesses/${businessId}/block`);
+  return data;
+}
