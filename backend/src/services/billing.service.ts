@@ -127,6 +127,10 @@ export async function recordPayment(
 ) {
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   if (!business) throw ApiError.notFound("Бизнес табылган жок.");
+  // The free trial covers Basic and Pro only: Max needs a paid period.
+  if (input.plan === "MAX" && input.months === 0 && (business.isTrial || !business.planExpiresAt || business.planExpiresAt <= new Date() || business.plan !== "MAX")) {
+    throw ApiError.badRequest("Макс тарифи бекер сыноого кирбейт — аны төлөм менен гана (кеминде 1 ай) ачууга болот.");
+  }
 
   const now = new Date();
   const base = business.planExpiresAt && business.planExpiresAt > now ? business.planExpiresAt : now;

@@ -336,8 +336,10 @@ export default function Landing() {
                     </li>
                   )}
                 </ul>
+                {/* The free trial covers Basic and Pro; Max opens once it's paid for. */}
+                {p.id === "MAX" && <p className="landing-plan-yearly">{t("landing.pricing.noTrial")}</p>}
                 <button className={`btn ${p.id === "PRO" ? "btn-primary" : "btn-secondary"}`} onClick={() => navigate("/register")}>
-                  {t("landing.pricing.cta", { days: trialDays })}
+                  {p.id === "MAX" ? t("landing.pricing.ctaPaid") : t("landing.pricing.cta", { days: trialDays })}
                 </button>
               </div>
             ))}
