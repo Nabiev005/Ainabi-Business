@@ -44,6 +44,13 @@ router.get(
 );
 
 router.post(
+  "/businesses/:id/complimentary",
+  asyncHandler(async (req, res) => {
+    const { complimentary } = z.object({ complimentary: z.boolean() }).parse(req.body);
+    res.json(await billingService.setComplimentary(req.params.id, complimentary));
+  }),
+);
+router.post(
   "/businesses/:id/block",
   asyncHandler(async (req, res) => {
     res.json(await billingService.blockBusiness(req.params.id));

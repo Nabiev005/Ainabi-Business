@@ -79,18 +79,19 @@ export default function Billing() {
           <div className="row gap-2" style={{ flexWrap: "wrap" }}>
             <strong style={{ fontSize: "var(--font-size-xl, 20px)" }}>{t(`billing.plans.${sub.plan}.name`)}</strong>
             {sub.isTrial && <Badge variant="info">{t("billing.trial")}</Badge>}
+            {sub.complimentary && <Badge variant="success">{t("platform.free")}</Badge>}
             {sub.active ? <Badge variant={sub.endingSoon ? "warning" : "success"}>{t("billing.active")}</Badge> : <Badge variant="danger">{t("billing.expired")}</Badge>}
           </div>
         </div>
         <div className="billing-current-facts">
           <div>
             <span>{sub.active ? t("billing.until") : t("billing.endedOn")}</span>
-            <strong>{sub.expiresAt ? formatDate(sub.expiresAt) : "—"}</strong>
+            <strong>{sub.complimentary ? t("platform.forever") : sub.expiresAt ? formatDate(sub.expiresAt) : "—"}</strong>
           </div>
           {sub.active && (
             <div>
               <span>{t("billing.daysLeftLabel")}</span>
-              <strong>{sub.daysLeft}</strong>
+              <strong>{sub.complimentary ? "∞" : sub.daysLeft}</strong>
             </div>
           )}
           <div>

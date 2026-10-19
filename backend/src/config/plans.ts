@@ -52,7 +52,22 @@ export function trialEndsAt(from = new Date()) {
   return end;
 }
 
-export function subscriptionInfo(business: { plan: PlanId; planExpiresAt: Date | null; isTrial: boolean }) {
+export function subscriptionInfo(business: { plan: PlanId; planExpiresAt: Date | null; isTrial: boolean; complimentary?: boolean }) {
+  if (business.complimentary) {
+    // Free for good: behaves like Max that never runs out.
+    return {
+      plan: "MAX" as PlanId,
+      isTrial: false,
+      complimentary: true,
+      expiresAt: null,
+      active: true,
+      daysLeft: 0,
+      endingSoon: false,
+      features: [...FEATURES] as Feature[],
+      maxEmployees: null as number | null,
+      maxLocations: null as number | null,
+    };
+  }
   const plan = PLANS[business.plan];
   const now = Date.now();
   const expiresAt = business.planExpiresAt;
@@ -61,7 +76,8 @@ export function subscriptionInfo(business: { plan: PlanId; planExpiresAt: Date |
   return {
     plan: plan.id,
     isTrial: business.isTrial,
-    expiresAt,
+    complimentary: false,
+    expiresAt: expiresAt as Date | null,
     active,
     daysLeft,
     endingSoon: active && daysLeft <= WARN_DAYS,

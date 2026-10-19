@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { BarChart3, PackageCheck, Wallet, Zap } from "lucide-react";
+import { BrandLogo } from "../../components/BrandLogo";
 
 export function BrandPanel() {
   const { t } = useTranslation();
@@ -7,8 +8,7 @@ export function BrandPanel() {
   return (
     <div className="auth-brand-panel">
       <div className="auth-brand-mark">
-        <span className="auth-brand-logo">AB</span>
-        <span>Ainabi Business</span>
+        <BrandLogo size={44} tone="light" />
       </div>
 
       <div>

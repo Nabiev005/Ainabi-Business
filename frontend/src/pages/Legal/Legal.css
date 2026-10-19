@@ -22,19 +22,6 @@
   font-weight: 800;
   font-size: var(--font-size-lg);
 }
-.legal-brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-600);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: var(--font-size-sm);
-  flex-shrink: 0;
-}
 .legal-content {
   max-width: 760px;
   margin: 0 auto;

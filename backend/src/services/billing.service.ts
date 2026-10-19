@@ -2,13 +2,13 @@ import { prisma } from "../config/prisma";
 import { env } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
-import { PLANS, PlanId, PLAN_IDS, subscriptionInfo } from "../config/plans";
+import { PLANS, PlanId, PLAN_IDS, subscriptionInfo, trialEndsAt } from "../config/plans";
 
 /** The billing page: current subscription, the plans, how to pay, past payments. */
 export async function getBilling(businessId: string) {
   const business = await prisma.business.findUniqueOrThrow({
     where: { id: businessId },
-    select: { id: true, name: true, plan: true, planExpiresAt: true, isTrial: true },
+    select: { id: true, name: true, plan: true, planExpiresAt: true, isTrial: true, complimentary: true },
   });
   const [payments, employees, locations] = await Promise.all([
     prisma.subscriptionPayment.findMany({ where: { businessId }, orderBy: { createdAt: "desc" }, take: 24 }),
@@ -176,5 +176,17 @@ export async function blockBusiness(businessId: string) {
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   if (!business) throw ApiError.notFound("Бизнес табылган жок.");
   const updated = await prisma.business.update({ where: { id: businessId }, data: { planExpiresAt: new Date(Date.now() - 1000) } });
+  return subscriptionInfo(updated);
+}
+
+/** Platform admin: make a business free for good (or take that back). */
+export async function setComplimentary(businessId: string, complimentary: boolean) {
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business) throw ApiError.notFound("Бизнес табылган жок.");
+  const updated = await prisma.business.update({
+    where: { id: businessId },
+    // Taking it back leaves a fresh 14-day window to arrange payment.
+    data: complimentary ? { complimentary: true, isTrial: false } : { complimentary: false, planExpiresAt: trialEndsAt() },
+  });
   return subscriptionInfo(updated);
 }

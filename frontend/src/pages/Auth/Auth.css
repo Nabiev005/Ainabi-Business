@@ -35,14 +35,8 @@
   font-weight: 800;
   font-size: var(--font-size-xl);
 }
-.auth-brand-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.auth-brand-mark .brand-icon {
+  filter: drop-shadow(0 6px 16px rgba(10, 22, 56, 0.35));
 }
 .auth-brand-headline {
   font-size: 34px;

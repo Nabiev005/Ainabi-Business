@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { BrandLogo } from "../components/BrandLogo";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -135,8 +136,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
       {mobileOpen && <div className="sidebar-mobile-overlay" onClick={onCloseMobile} />}
       <aside className={`sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-brand">
-          <div className="sidebar-brand-mark">AB</div>
-          {!collapsed && <span className="sidebar-brand-name">Ainabi Business</span>}
+          <BrandLogo size={34} iconOnly={collapsed} />
         </div>
 
         <nav className="sidebar-nav">
