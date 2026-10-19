@@ -1,7 +1,7 @@
 # Ainabi Business — Android тиркемеси
 
 Capacitor 8 менен жасалган кабык. Тиркеме ичинде жандуу сайт ачылат
-(`capacitor.config.ts` → `SITE_URL`, азыр `https://ainabi-business.vercel.app`).
+(`capacitor.config.ts` → `SITE_URL`, азыр `https://business.ainabi.site`).
 Ошондуктан сайтка deploy кылганда тиркеме да ошол замат жаңырат, жаңы APK
 керек эмес. Жаңы APK иконка, тиркеменин аты же Android жөндөөлөрү
 өзгөргөндө гана чыгарылат.
