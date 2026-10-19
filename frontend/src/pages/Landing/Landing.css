@@ -28,18 +28,6 @@
   font-weight: 800;
   font-size: var(--font-size-lg);
 }
-.landing-brand-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-600);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  flex-shrink: 0;
-}
 .landing-nav-actions {
   display: flex;
   align-items: center;
@@ -52,7 +40,7 @@
   .landing-nav {
     padding: var(--space-3) var(--space-4);
   }
-  .landing-brand span {
+  .landing-brand .brand-wordmark {
     display: none;
   }
 }

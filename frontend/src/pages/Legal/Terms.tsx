@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
+import { BrandLogo } from "../../components/BrandLogo";
 import "./Legal.css";
 
 export default function Terms() {
@@ -11,8 +12,7 @@ export default function Terms() {
     <div className="legal-page">
       <nav className="legal-nav">
         <div className="legal-brand">
-          <span className="legal-brand-mark">AB</span>
-          <span>Ainabi Business</span>
+          <BrandLogo size={32} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <LanguageSwitcher />

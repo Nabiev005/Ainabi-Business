@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { NEW_FEATURES } from "../../components/WhatsNew";
+import { BrandLogo } from "../../components/BrandLogo";
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -141,8 +142,7 @@ export default function Landing() {
     <div className="landing">
       <nav className="landing-nav">
         <div className="landing-brand">
-          <span className="landing-brand-mark">AB</span>
-          <span>Ainabi Business</span>
+          <BrandLogo size={36} />
         </div>
         <div className="landing-nav-actions">
           <LanguageSwitcher />
@@ -186,7 +186,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="landing-hero-image">
-          <img src="/og-banner.png" alt="Ainabi Business" />
+          <img src="/app-preview.png" alt="Ainabi Business" />
         </div>
       </section>
 

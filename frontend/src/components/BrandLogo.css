@@ -1,0 +1,39 @@
+.brand-icon {
+  display: block;
+  flex-shrink: 0;
+}
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  min-width: 0;
+}
+.brand-wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  white-space: nowrap;
+}
+.brand-wordmark-name {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.brand-wordmark-sub {
+  margin-top: 0.18em;
+  font-size: 0.42em;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+.brand-logo-dark .brand-wordmark-name {
+  color: #0a1638;
+}
+.brand-logo-dark .brand-wordmark-sub {
+  color: #155dfc;
+}
+.brand-logo-light .brand-wordmark-name {
+  color: #fff;
+}
+.brand-logo-light .brand-wordmark-sub {
+  color: #a5c0ff;
+}

@@ -29,25 +29,6 @@
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
-.sidebar-brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-600);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  flex-shrink: 0;
-  font-size: var(--font-size-md);
-}
-.sidebar-brand-name {
-  font-weight: 800;
-  font-size: var(--font-size-lg);
-  white-space: nowrap;
-  overflow: hidden;
-}
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
