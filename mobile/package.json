@@ -1,0 +1,20 @@
+{
+  "name": "ainabi-business-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android app shell for Ainabi Business (loads the live site)",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "icons": "node scripts/generate-icons.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@resvg/resvg-js": "2.6.2",
+    "typescript": "5.6.3"
+  }
+}
