@@ -1052,7 +1052,8 @@
       "removeAria": "Өчүрүү",
       "serialPlaceholder": "IMEI / S/N {{n}}",
       "warranty": "Кепилдик: {{months}} ай",
-      "unit": "Бирдик"
+      "unit": "Бирдик",
+      "open": "Себетке өтүү"
     },
     "summary": {
       "subtotal": "Сумма",

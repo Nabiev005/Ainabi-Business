@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  /* No 300ms double-tap-zoom delay on taps. */
+  touch-action: manipulation;
+}
+
 html,
 body,
 #root {
@@ -21,6 +27,21 @@ body {
   /* Last-resort backstop — wide content should scroll inside its own
      .table-wrap etc., never the page itself, on any screen size. */
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Installed app (home-screen PWA): no rubber-band / pull-to-refresh, like a native app. */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Pages outside the app shell (login, register, ...) stay clear of the
+   status bar and gesture bar when drawn edge-to-edge. */
+#root > :not(.app-shell) {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
 }
 
 h1, h2, h3, h4, h5, p {

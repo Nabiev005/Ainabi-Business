@@ -1052,7 +1052,8 @@
       "removeAria": "Удалить",
       "serialPlaceholder": "IMEI / S/N {{n}}",
       "warranty": "Гарантия: {{months}} мес.",
-      "unit": "Единица"
+      "unit": "Единица",
+      "open": "К корзине"
     },
     "summary": {
       "subtotal": "Сумма",

@@ -9,6 +9,7 @@ import { RequirePermission } from "./components/RequirePermission";
 import { RequireFeature } from "./components/RequireFeature";
 import { RequirePlatformAdmin } from "./components/RequirePlatformAdmin";
 import { AppLayout } from "./layouts/AppLayout";
+import { NativeBackButton } from "./components/NativeBackButton";
 
 const Landing = lazy(() => import("./pages/Landing/Landing"));
 const Login = lazy(() => import("./pages/Auth/Login"));
@@ -116,6 +117,7 @@ export default function App() {
             </Routes>
           </Suspense>
           <ToastStack />
+          <NativeBackButton />
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

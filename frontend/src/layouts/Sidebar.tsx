@@ -37,6 +37,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useBackButton } from "../hooks/useBackButton";
 import { sessionCan } from "../hooks/usePermissions";
 import type { Permission, Session } from "../types";
 import type { Feature } from "../services/billing.service";
@@ -45,14 +46,14 @@ const can = (s: Session, ...permissions: Permission[]) => permissions.some((p) =
 
 // Each role only sees the screens it can actually use (see backend config/permissions.ts).
 /** Not in the plan: still listed (so owners know it exists), with a lock. */
-const locked = (s: Session, feature?: Feature) => !!feature && !s.isPlatformAdmin && !s.subscription?.features.includes(feature);
+export const locked = (s: Session, feature?: Feature) => !!feature && !s.isPlatformAdmin && !s.subscription?.features.includes(feature);
 
 type NavGroup = "main" | "sales" | "catalog" | "money" | "reports" | "team";
 
 /** Menu sections in display order ("main" has no heading). */
 const GROUPS: NavGroup[] = ["main", "sales", "catalog", "money", "reports", "team"];
 
-const NAV_ITEMS: Array<{
+export interface NavItem {
   to: string;
   key: string;
   icon: typeof LayoutDashboard;
@@ -60,7 +61,9 @@ const NAV_ITEMS: Array<{
   end?: boolean;
   show: (s: Session) => boolean;
   feature?: Feature;
-}> = [
+}
+
+export const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", key: "dashboard", icon: LayoutDashboard, group: "main", end: true, show: (s) => can(s, "reports.view") },
 
   { to: "/pos", key: "pos", icon: ShoppingCart, group: "sales", show: (s) => can(s, "pos.sell") },
@@ -119,6 +122,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
   const { pathname } = useLocation();
   const [closed, setClosed] = useState<NavGroup[]>(readClosedGroups);
   const activeGroup = items.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))?.group;
+  useBackButton(mobileOpen, onCloseMobile);
 
   useEffect(() => {
     try {

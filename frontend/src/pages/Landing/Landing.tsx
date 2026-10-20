@@ -57,6 +57,7 @@ import { useGuideSections } from "../../data/guideSections";
 import * as billingService from "../../services/billing.service";
 import type { Feature as PlanFeature, PlanDefinition } from "../../services/billing.service";
 import { formatMoney } from "../../utils/format";
+import { isNativeApp } from "../../utils/native";
 import "./Landing.css";
 
 interface Problem { before: string; after: string }
@@ -132,6 +133,11 @@ export default function Landing() {
       .catch(() => setPlans([]));
   }, []);
   const limit = (n: number | null) => (n === null ? t("billing.unlimited") : String(n));
+
+  // The Android app opens straight into the product, never the marketing page.
+  if (isNativeApp()) {
+    return isLoading ? null : <Navigate to={session ? "/dashboard" : "/login"} replace />;
+  }
 
   // Already signed in — no reason to see the marketing page every visit.
   if (!isLoading && session) {

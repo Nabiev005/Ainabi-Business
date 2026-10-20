@@ -119,6 +119,13 @@ Git тарыхы боюнча, эскиден жаңыга карай:
 19. **Жаңы лого жана Android тиркемеси (2026-10-19):**
     - Лого: `components/BrandLogo.tsx` (`BrandIcon`, `BrandLogo`), булагы `frontend/public/favicon.svg`. Favicon, PWA иконкалары жана `og-banner.png` ошондон түзүлгөн. Лендингдеги скриншот `app-preview.png` файлына көчтү (анда али эски «AB» бар — deploy'дон кийин жаңы скриншот керек).
     - `mobile/`: Capacitor 8, тиркеме жандуу сайтты ачат (`business.ainabi.site`), appId `site.ainabi.business`. Иконкалар: `npm run icons`. Gradle 9.1 (Android Studio'нун Java 25'и үчүн). Чоо-жайы `mobile/README.md`'де.
+20. **Телефондо чыныгы тиркемедей (2026-10-20):**
+    - ≤768px: ылдыйкы таб-бар (`layouts/MobileTabBar.tsx`, ролго жараша 4 бет + «Меню»), header — логотип + бизнестин аты, издөө баскычы толук экрандуу издөөнү ачат; тил тандоо Настройкаларда.
+    - ≤640px: `Modal` ылдыйдан чыгат (bottom sheet), `Drawer` толук экран, toast'тар үстүдө. Инпуттар 16px (iPhone фокуста масштабды чоңойтпосун).
+    - Safe-area: `--safe-top/--safe-bottom` (`styles/tokens.css`), `viewport-fit=cover`, iPhone PWA мета-тегдер, `index.html`'де жүктөлүү логотиби.
+    - POS: себет ылдыйда калганда калкып турган «себетке өтүү» тилкеси (portal — `.route-transition` transform'у fixed'ди бузат).
+    - Тиркеме: `@capacitor/app` менен Android артка баскычы (`components/NativeBackButton.tsx`, ачык терезелер `hooks/useBackButton.ts` аркылуу жабылат), SystemBars edge-to-edge, жарык тема, `AinabiApp` user-agent, тиркемеде лендинг жана Google баскычы жок. `versionCode 2` — **жаңы APK керек**.
+    - Эскертүү: `layout.css` `components.css`'тен **мурун** жүктөлөт — `.btn`/`.stack` классы бар элементти жашыруу үчүн `.header .x` сыяктуу күчтүүрөөк селектор керек.
 
 ## Сүйлөшүүлөрдөн чыккан чечимдер жана контекст
 

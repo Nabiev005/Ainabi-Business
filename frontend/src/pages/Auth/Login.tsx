@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import { extractErrorMessage } from "../../services/api";
+import { isNativeApp } from "../../utils/native";
 import "./Auth.css";
 
 export default function Login() {
@@ -58,8 +59,13 @@ export default function Login() {
             <p className="auth-subtitle">{t("auth.login.subtitle")}</p>
           </div>
 
-          <GoogleSignInButton onSuccess={() => { showToast({ variant: "success", title: t("auth.login.welcomeTitle") }); navigate("/dashboard"); }} />
-          <div className="auth-divider">{t("auth.login.orEmail")}</div>
+          {/* Google refuses to sign in inside an app WebView ("disallowed_useragent"). */}
+          {!isNativeApp() && (
+            <>
+              <GoogleSignInButton onSuccess={() => { showToast({ variant: "success", title: t("auth.login.welcomeTitle") }); navigate("/dashboard"); }} />
+              <div className="auth-divider">{t("auth.login.orEmail")}</div>
+            </>
+          )}
 
           <form className="stack gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="field">

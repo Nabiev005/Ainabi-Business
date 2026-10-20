@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LogOut, Menu, Plus, Settings, User } from "lucide-react";
+import { LogOut, Menu, Plus, Search, Settings, User } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useLabels } from "../hooks/useLabels";
+import { useBackButton } from "../hooks/useBackButton";
 import { GlobalSearch } from "./GlobalSearch";
 import { NotificationCenter } from "./NotificationCenter";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { BrandIcon } from "../components/BrandLogo";
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
@@ -18,7 +20,9 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
   const labels = useLabels();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  useBackButton(profileOpen, () => setProfileOpen(false));
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -43,14 +47,24 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
         <Menu size={18} />
       </button>
 
-      <GlobalSearch />
+      {/* Phones: an app bar with the business name instead of the search box. */}
+      <div className="header-title">
+        <BrandIcon size={30} />
+        <span>{session?.business.name}</span>
+      </div>
+
+      <GlobalSearch mobileOpen={searchOpen} onCloseMobile={() => setSearchOpen(false)} />
 
       <div className="spacer" />
 
       <div className="header-actions">
-        <LanguageSwitcher />
+        <button className="header-icon-btn header-search-toggle" onClick={() => setSearchOpen(true)} aria-label={t("header.searchPlaceholder")}>
+          <Search size={18} />
+        </button>
 
-        <button className="btn btn-primary btn-sm" onClick={() => navigate("/pos")}>
+        <LanguageSwitcher className="header-lang" />
+
+        <button className="btn btn-primary btn-sm header-quick-sale" onClick={() => navigate("/pos")}>
           <Plus size={16} />
           <span className="quick-sale-label">{t("header.quickSale")}</span>
         </button>

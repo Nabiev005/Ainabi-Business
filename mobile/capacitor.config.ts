@@ -14,8 +14,21 @@ const config: CapacitorConfig = {
     // Shown when the site can't be reached (no internet).
     errorPath: "offline.html",
   },
+  // Lets the site tell it runs inside the app (frontend/src/utils/native.ts).
+  appendUserAgent: "AinabiApp",
   android: {
-    backgroundColor: "#0A1638",
+    // Matches the site's loading screen, so the hand-off from the navy
+    // launch splash to the page has no white flash.
+    backgroundColor: "#F6F7FB",
+  },
+  plugins: {
+    SystemBars: {
+      // Draw edge-to-edge; the site pads itself with --safe-area-inset-*.
+      insetsHandling: "css",
+      initialViewportFitValueHint: "cover",
+      // Dark status-bar icons over the site's white header.
+      style: "LIGHT",
+    },
   },
 };
 

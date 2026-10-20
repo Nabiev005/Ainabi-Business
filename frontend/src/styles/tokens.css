@@ -82,6 +82,19 @@
   --sidebar-width: 264px;
   --sidebar-width-collapsed: 76px;
   --header-height: 68px;
+  --tabbar-height: 62px;
+  /* Notch / status bar / gesture bar. Inside the Android app Capacitor sets
+     --safe-area-inset-* itself (older WebViews report env() wrong). */
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
   --transition-fast: 150ms ease;
   --transition-base: 220ms ease;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 58px;
+  }
 }

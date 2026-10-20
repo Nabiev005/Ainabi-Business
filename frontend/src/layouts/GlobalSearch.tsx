@@ -1,17 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Package, Search, ShieldCheck, User, X } from "lucide-react";
+import { ArrowLeft, Package, Search, ShieldCheck, User, X } from "lucide-react";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import * as productService from "../services/product.service";
 import * as customerService from "../services/customer.service";
 import * as saleService from "../services/sale.service";
 import { useAuth } from "../hooks/useAuth";
+import { useBackButton } from "../hooks/useBackButton";
 import { usePermissions } from "../hooks/usePermissions";
 import { formatDate, formatMoney } from "../utils/format";
 import type { Customer, Product, SerialLookupResult } from "../types";
 
-export function GlobalSearch() {
+interface GlobalSearchProps {
+  /** Phones: the search covers the header while open (see Header's search button). */
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export function GlobalSearch({ mobileOpen = false, onCloseMobile }: GlobalSearchProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { can } = usePermissions();
@@ -27,6 +34,12 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const debouncedQuery = useDebouncedValue(query, 300);
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (mobileOpen) inputRef.current?.focus();
+  }, [mobileOpen]);
+  useBackButton(mobileOpen, () => onCloseMobile?.());
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -71,26 +84,37 @@ export function GlobalSearch() {
 
   function goToSerialHit(hit: SerialLookupResult) {
     setOpen(false);
+    onCloseMobile?.();
     setQuery("");
     navigate(hit.saleId ? `/sales?open=${hit.saleId}` : `/products?q=${encodeURIComponent(hit.productName)}`);
   }
 
   function goToProduct(p: Product) {
     setOpen(false);
+    onCloseMobile?.();
     setQuery("");
     navigate(`/products?q=${encodeURIComponent(p.name)}`);
   }
 
   function goToCustomer(c: Customer) {
     setOpen(false);
+    onCloseMobile?.();
     setQuery("");
     navigate(`/customers/${c.id}`);
   }
 
   return (
-    <div className="header-search" ref={rootRef}>
+    <div className={`header-search ${mobileOpen ? "mobile-open" : ""}`} ref={rootRef}>
       <Search size={16} />
+      {mobileOpen && (
+        <button type="button" className="header-search-back" aria-label={t("common.close")} onClick={onCloseMobile}>
+          <ArrowLeft size={20} />
+        </button>
+      )}
       <input
+        ref={inputRef}
+        type="search"
+        enterKeyHint="search"
         placeholder={t("header.searchPlaceholder")}
         value={query}
         onChange={(e) => {

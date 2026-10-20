@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { MobileTabBar } from "./MobileTabBar";
 import { SubscriptionBanner } from "../components/SubscriptionBanner";
 import "./layout.css";
 
@@ -27,6 +28,7 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+      <MobileTabBar menuOpen={mobileOpen} onOpenMenu={() => setMobileOpen(true)} />
     </div>
   );
 }
