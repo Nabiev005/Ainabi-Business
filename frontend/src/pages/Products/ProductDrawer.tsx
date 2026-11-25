@@ -11,6 +11,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { formatMoney } from "../../utils/format";
 import { generateBarcodeFromSku } from "../../utils/barcode";
 import { resizeImageToDataUrl } from "../../utils/image";
+import { findDuplicateSerial, parseSerials } from "../../utils/serials";
 import { useToast } from "../../hooks/useToast";
 import { AnalogsSection, BatchesSection, PackagesEditor, SerialsSection } from "./ProductExtras";
 import "./Products.css";
@@ -49,6 +50,7 @@ export interface ProductFormValues {
   description?: string;
   attributes?: Record<string, AttributeValue | null>;
   requiresSerial?: boolean;
+  serialNumbers?: string[];
   warrantyMonths?: number | null;
   prescriptionRequired?: boolean;
   scaleCode?: string | null;
@@ -116,6 +118,8 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
   const [inUsd, setInUsd] = useState(false);
   const [usdRate, setUsdRate] = useState<{ rate: number; step: number } | null>(null);
   const [packages, setPackages] = useState<ProductPackage[]>([]);
+  /** One serial / IMEI per line. */
+  const [serialsText, setSerialsText] = useState("");
   const { session } = useAuth();
   const business = session?.business;
   const productFields = useMemo(() => business?.productFields ?? [], [business?.productFields]);
@@ -189,10 +193,14 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
   // while the user hasn't typed their own — never touches a barcode that
   // was already there (typed by hand, or loaded from an existing product).
   const lastAutoBarcode = useRef<string | undefined>(undefined);
+  // Same idea for the initial stock we fill in from the number of serials.
+  const lastAutoQuantity = useRef(0);
 
   useEffect(() => {
     if (open) {
       lastAutoBarcode.current = undefined;
+      lastAutoQuantity.current = 0;
+      setSerialsText("");
       // A previously-uploaded image is stored as a data: URL, which isn't
       // something a person would want to see/edit as text — only reveal the
       // manual-URL field by default when the existing value is a real link.
@@ -250,7 +258,36 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
       .catch(() => undefined);
   }, [open, inUsd, usdRate]);
 
+  // Units received through a document get their serials in that document.
+  const showSerials = trackSerials && !hideInitialStock;
+  const serials = showSerials ? parseSerials(serialsText) : [];
+  const duplicateSerial = findDuplicateSerial(serials);
+
+  function handleSerialsChange(text: string) {
+    setSerialsText(text);
+    const count = parseSerials(text).length;
+    // Registered units are always asked for at the POS.
+    if (count > 0) setValue("requiresSerial", true, { shouldDirty: true });
+    // New product: one serial = one unit, unless the stock was typed by hand.
+    if (!product && Number(quantityValue || 0) === lastAutoQuantity.current) {
+      lastAutoQuantity.current = count;
+      setValue("quantity", count, { shouldDirty: true });
+    }
+  }
+
   const submit = handleSubmit((values) => {
+    if (duplicateSerial) {
+      showToast({ variant: "error", title: t("products.drawer.serials"), message: t("products.drawer.serialDuplicate", { serial: duplicateSerial }) });
+      return;
+    }
+    if (!product && serials.length > values.quantity) {
+      showToast({
+        variant: "error",
+        title: t("products.drawer.serials"),
+        message: t("products.drawer.serialsTooMany", { total: serials.length, qty: values.quantity }),
+      });
+      return;
+    }
     const cleanPackages = packages.filter((p) => p.name.trim() && p.factor > 0);
     return onSubmit({
       ...values,
@@ -259,7 +296,8 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
       usdSalePrice: inUsd ? (values.usdSalePrice ?? null) : null,
       quantity: hideInitialStock ? 0 : values.quantity,
       attributes: normalizeAttributes(productFields, values.attributes),
-      requiresSerial: trackSerials ? !!values.requiresSerial : false,
+      requiresSerial: trackSerials ? !!values.requiresSerial || serials.length > 0 : false,
+      serialNumbers: serials.length > 0 ? serials : undefined,
       warrantyMonths: trackWarranty ? (values.warrantyMonths ?? null) : null,
       prescriptionRequired: checkPrescription ? !!values.prescriptionRequired : false,
       scaleCode: weightBarcodes ? values.scaleCode || null : null,
@@ -385,6 +423,32 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
             )}
           </div>
         </div>
+
+        {showSerials && (
+          <div className="field">
+            <label className="field-label" htmlFor="product-serials">
+              {product ? t("products.drawer.serialsAdd") : t("products.drawer.serials")}
+            </label>
+            <textarea
+              id="product-serials"
+              className={`textarea product-serials-input ${duplicateSerial ? "has-error" : ""}`}
+              rows={Math.min(Math.max(serialsText.split("\n").length, 2), 8)}
+              placeholder={t("products.drawer.serialsPlaceholder")}
+              value={serialsText}
+              onChange={(e) => handleSerialsChange(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {duplicateSerial ? (
+              <span className="field-error">{t("products.drawer.serialDuplicate", { serial: duplicateSerial })}</span>
+            ) : (
+              <span className="field-hint">
+                {serials.length > 0 && `${t("products.drawer.serialsTotal", { total: serials.length })} `}
+                {t("products.drawer.serialsHint")}
+              </span>
+            )}
+          </div>
+        )}
 
         <label className="row gap-2" style={{ cursor: "pointer", fontSize: "var(--font-size-sm)" }}>
           <input type="checkbox" checked={inUsd} onChange={(e) => setInUsd(e.target.checked)} />
@@ -526,7 +590,7 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
 
         {product && <AnalogsSection product={product} />}
         {product && trackExpiry && <BatchesSection productId={product.id} unit={product.unit} />}
-        {product && product.requiresSerial && <SerialsSection productId={product.id} />}
+        {product && trackSerials && <SerialsSection productId={product.id} />}
 
         <div className="field">
           <label className="field-label">{t("products.drawer.image")}</label>

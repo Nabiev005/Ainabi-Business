@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
 import { generateBarcodeFromSku } from "../utils/barcode";
+import { assertSerialsFitStock, normalizeSerials } from "../utils/serials";
 import { changeStock, Db, resolveLocationId } from "../utils/stockLedger";
 import { firstStageId } from "./pipeline.service";
 import {
@@ -85,11 +86,15 @@ async function loadBusinessConfig(db: Db, businessId: string) {
 type BusinessConfig = Awaited<ReturnType<typeof loadBusinessConfig>>;
 
 /** Everything product-level that depends on which modules the business has on. */
-function moduleFields(config: BusinessConfig, input: Pick<ProductInput, "requiresSerial" | "warrantyMonths" | "prescriptionRequired" | "scaleCode">) {
+function moduleFields(
+  config: BusinessConfig,
+  input: Pick<ProductInput, "requiresSerial" | "warrantyMonths" | "prescriptionRequired" | "scaleCode"> & { serialNumbers?: string[] },
+) {
   const { business } = config;
   return {
-    // Flags only mean something while the business tracks them.
-    requiresSerial: business.trackSerials && input.requiresSerial,
+    // Flags only mean something while the business tracks them. A product
+    // with registered serials always asks for them at the POS too.
+    requiresSerial: business.trackSerials && (input.requiresSerial || !!input.serialNumbers?.length),
     warrantyMonths: business.trackWarranty ? input.warrantyMonths || null : null,
     prescriptionRequired: business.checkPrescription && input.prescriptionRequired,
     scaleCode: business.weightBarcodes ? input.scaleCode || null : null,
@@ -389,12 +394,30 @@ async function addInitialStock(
   }
 }
 
+/** Registers units typed into the product form as in stock. A number the
+ * business already knows is refused: re-buying a sold unit is a trade-in
+ * receipt, which keeps its history. */
+async function registerSerials(db: Db, businessId: string, productId: string, serials: string[], stockQuantity: number) {
+  if (serials.length === 0) return;
+  const inStock = await db.productSerial.count({ where: { businessId, productId, status: "IN_STOCK" } });
+  assertSerialsFitStock(inStock + serials.length, stockQuantity);
+
+  const known = await db.productSerial.findFirst({ where: { businessId, serial: { in: serials } } });
+  if (known) {
+    throw ApiError.conflict(
+      known.status === "SOLD" ? `"${known.serial}" номери мурун сатылган.` : `"${known.serial}" номери мурунтан складда бар.`,
+    );
+  }
+  await db.productSerial.createMany({ data: serials.map((serial) => ({ businessId, productId, serial })) });
+}
+
 export async function createProduct(businessId: string, input: ProductInput, employeeId?: string) {
   return prisma.$transaction(async (tx) => {
     const config = await loadBusinessConfig(tx, businessId);
     await assertCategory(tx, businessId, input.categoryId);
     const { attributes, attributesText } = validateAttributes(config.fields, input.attributes);
-    const modules = moduleFields(config, input);
+    const serials = config.business.trackSerials ? normalizeSerials(input.serialNumbers) : [];
+    const modules = moduleFields(config, { ...input, serialNumbers: serials });
     await assertScaleCodeFree(tx, businessId, modules.scaleCode);
 
     if (input.barcode) await assertBarcodeFree(tx, businessId, input.barcode);
@@ -427,6 +450,7 @@ export async function createProduct(businessId: string, input: ProductInput, emp
 
     if (input.packages?.length) await replacePackages(tx, businessId, product.id, input.packages);
     await addInitialStock(tx, config, product, input, employeeId);
+    await registerSerials(tx, businessId, product.id, serials, input.quantity);
 
     const created = await tx.product.findUniqueOrThrow({ where: { id: product.id }, include: productInclude() });
     return serializeProduct(created);
@@ -440,7 +464,8 @@ export async function updateProduct(businessId: string, id: string, input: Produ
     const config = await loadBusinessConfig(tx, businessId);
     await assertCategory(tx, businessId, input.categoryId);
     const { attributes, attributesText } = validateAttributes(config.fields, input.attributes);
-    const modules = moduleFields(config, input);
+    const serials = config.business.trackSerials ? normalizeSerials(input.serialNumbers) : [];
+    const modules = moduleFields(config, { ...input, serialNumbers: serials });
     await assertScaleCodeFree(tx, businessId, modules.scaleCode, id);
 
     if (input.barcode && input.barcode !== existing.barcode) {
@@ -467,6 +492,7 @@ export async function updateProduct(businessId: string, id: string, input: Produ
       },
     });
     if (input.packages) await replacePackages(tx, businessId, id, input.packages);
+    await registerSerials(tx, businessId, id, serials, toNumber(existing.quantity));
 
     const updated = await tx.product.findUniqueOrThrow({ where: { id }, include: productInclude() });
     return serializeProduct(updated);
@@ -610,6 +636,12 @@ export async function listSerials(businessId: string, productId: string, status?
     take: 500,
   });
   return serials.map((s) => ({ id: s.id, serial: s.serial, status: s.status, createdAt: s.createdAt, soldAt: s.soldAt }));
+}
+
+/** Removes a mistyped number. Sold units stay: they are the sale's history. */
+export async function deleteSerial(businessId: string, productId: string, serialId: string) {
+  const { count } = await prisma.productSerial.deleteMany({ where: { id: serialId, businessId, productId, status: "IN_STOCK" } });
+  if (count === 0) throw ApiError.notFound("Бул номер складда табылган жок.");
 }
 
 export async function listBatches(businessId: string, productId: string) {

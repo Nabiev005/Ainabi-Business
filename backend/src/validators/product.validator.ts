@@ -41,6 +41,8 @@ export const productSchema = z.object({
   // Business.productFields in product.service (unknown keys are dropped).
   attributes: z.record(z.union([z.string().max(LIMITS.comment), z.number(), z.boolean(), z.null()])).default({}),
   requiresSerial: z.boolean().default(false),
+  // Serial / IMEI numbers to register as in stock (added to the existing ones).
+  serialNumbers: z.array(z.string().trim().max(LIMITS.short)).max(500).optional(),
   warrantyMonths: z.coerce.number().int().min(0).max(240).optional().nullable(),
   prescriptionRequired: z.boolean().default(false),
   scaleCode: z.preprocess(

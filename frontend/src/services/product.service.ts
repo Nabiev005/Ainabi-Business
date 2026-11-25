@@ -39,6 +39,8 @@ export interface ProductPayload {
   description?: string | null;
   attributes?: Record<string, AttributeValue | null>;
   requiresSerial?: boolean;
+  /** New units to register as in stock. */
+  serialNumbers?: string[];
   warrantyMonths?: number | null;
   prescriptionRequired?: boolean;
   scaleCode?: string | null;
@@ -125,6 +127,10 @@ export async function setAnalogs(productId: string, analogIds: string[]): Promis
 export async function listSerials(productId: string, status?: "IN_STOCK" | "SOLD"): Promise<ProductSerialUnit[]> {
   const { data } = await api.get<ProductSerialUnit[]>(`/products/${productId}/serials`, { params: { status } });
   return data;
+}
+
+export async function deleteSerial(productId: string, serialId: string): Promise<void> {
+  await api.delete(`/products/${productId}/serials/${serialId}`);
 }
 
 export async function listBatches(productId: string): Promise<ProductBatch[]> {
