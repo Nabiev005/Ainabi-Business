@@ -2,6 +2,17 @@
 <html lang="ky">
   <head>
     <meta charset="UTF-8" />
+    <!-- The old address is still in Google: send its public pages to the real
+         domain. App pages (/pos, /dashboard, ...) and /api stay as they are,
+         so people working there aren't signed out mid-sale. -->
+    <script>
+      if (
+        location.hostname === "ainabi-business.vercel.app" &&
+        /^\/(login|register|privacy|terms|c\/.*)?$/.test(location.pathname)
+      ) {
+        location.replace("https://business.ainabi.site" + location.pathname + location.search + location.hash);
+      }
+    </script>
     <meta name="google-site-verification" content="Nm9-1kDtu12BxPgGCT3YlQJxT6s0amAb61VkXB7JAmI" />
     <meta name="google-site-verification" content="bnjMvVknZsGIxvG1tVPLAXf2cIrM0Z9P5OWwom2PNAI" />
     <meta name="google-site-verification" content="x7Rquqa2LEfoKTtFmPVnMr7L_6MhMbhpRNI0KzgPFfk" />
