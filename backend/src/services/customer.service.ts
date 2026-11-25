@@ -2,6 +2,7 @@ import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
 import { CustomerInput } from "../validators/customer.validator";
+import { hasPermission, Role } from "../config/permissions";
 
 export async function listCustomers(businessId: string, search?: string) {
   const customers = await prisma.customer.findMany({
@@ -80,18 +81,25 @@ export async function getCustomer(businessId: string, id: string) {
   };
 }
 
-export function createCustomer(businessId: string, input: CustomerInput) {
+export function createCustomer(businessId: string, role: Role, input: CustomerInput) {
+  const isWholesale = input.isWholesale && hasPermission(role, "prices.wholesale");
   return prisma.customer.create({
-    data: { businessId, name: input.name, phone: input.phone || null, notes: input.notes || null, isWholesale: input.isWholesale },
+    data: { businessId, name: input.name, phone: input.phone || null, notes: input.notes || null, isWholesale },
   });
 }
 
-export async function updateCustomer(businessId: string, id: string, input: CustomerInput) {
+export async function updateCustomer(businessId: string, role: Role, id: string, input: CustomerInput) {
   const existing = await prisma.customer.findFirst({ where: { id, businessId } });
   if (!existing) throw ApiError.notFound("Кардар табылган жок.");
   return prisma.customer.update({
     where: { id },
-    data: { name: input.name, phone: input.phone || null, notes: input.notes || null, isWholesale: input.isWholesale },
+    data: {
+      name: input.name,
+      phone: input.phone || null,
+      notes: input.notes || null,
+      // Left as it is for roles that may not change it.
+      ...(hasPermission(role, "prices.wholesale") ? { isWholesale: input.isWholesale } : {}),
+    },
   });
 }
 

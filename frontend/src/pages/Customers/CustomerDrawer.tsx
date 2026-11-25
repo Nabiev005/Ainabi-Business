@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Drawer } from "../../components/ui/Drawer";
+import { usePermissions } from "../../hooks/usePermissions";
 import type { Customer } from "../../types";
 
 interface CustomerDrawerProps {
@@ -13,6 +14,7 @@ interface CustomerDrawerProps {
 
 export function CustomerDrawer({ open, onClose, onSubmit, customer, submitting }: CustomerDrawerProps) {
   const { t } = useTranslation();
+  const { can } = usePermissions();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -62,15 +64,17 @@ export function CustomerDrawer({ open, onClose, onSubmit, customer, submitting }
           <label className="field-label">{t("customers.drawer.comment")}</label>
           <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("customers.drawer.commentPlaceholder")} />
         </div>
-        <label className="row gap-2" style={{ fontSize: "var(--font-size-sm)" }}>
-          <input type="checkbox" checked={isWholesale} onChange={(e) => setIsWholesale(e.target.checked)} />
-          <span>
-            <strong>{t("customers.drawer.wholesale")}</strong>
-            <span className="field-hint" style={{ display: "block" }}>
-              {t("customers.drawer.wholesaleHint")}
+        {can("prices.wholesale") && (
+          <label className="row gap-2" style={{ fontSize: "var(--font-size-sm)" }}>
+            <input type="checkbox" checked={isWholesale} onChange={(e) => setIsWholesale(e.target.checked)} />
+            <span>
+              <strong>{t("customers.drawer.wholesale")}</strong>
+              <span className="field-hint" style={{ display: "block" }}>
+                {t("customers.drawer.wholesaleHint")}
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        )}
       </form>
     </Drawer>
   );

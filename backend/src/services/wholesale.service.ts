@@ -19,11 +19,13 @@ import { notifyWholesaleOrder } from "./telegram.service";
 
 const PAGE_SIZE = 30;
 
-const listedProduct = (sellerId: string): Prisma.ProductWhereInput => ({
-  businessId: sellerId,
+const listedProducts = (businessId: Prisma.ProductWhereInput["businessId"]): Prisma.ProductWhereInput => ({
+  businessId,
   status: "ACTIVE",
   quantity: { gt: 0 },
   wholesalePrice: { not: null },
+  // Goods still in a "not for sale" pipeline stage can't be shipped anyway.
+  OR: [{ stageId: null }, { stage: { blocksSale: false } }],
 });
 
 // ---------- settings ----------
@@ -53,7 +55,7 @@ export async function listSuppliers(businessId: string, search?: string) {
   });
   const counts = await prisma.product.groupBy({
     by: ["businessId"],
-    where: { businessId: { in: sellers.map((s) => s.id) }, status: "ACTIVE", quantity: { gt: 0 }, wholesalePrice: { not: null } },
+    where: { ...listedProducts({ in: sellers.map((s) => s.id) }) },
     _count: true,
   });
   const countBy = new Map(counts.map((c) => [c.businessId, c._count]));
@@ -73,8 +75,8 @@ export async function listSupplierProducts(businessId: string, sellerId: string,
   const seller = await assertSeller(businessId, sellerId);
   const q = query.search?.trim();
   const where: Prisma.ProductWhereInput = {
-    ...listedProduct(sellerId),
-    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { barcode: q }, { attributesText: { contains: q, mode: "insensitive" } }] } : {}),
+    ...listedProducts(sellerId),
+    ...(q ? { AND: [{ OR: [{ name: { contains: q, mode: "insensitive" } }, { barcode: q }, { attributesText: { contains: q, mode: "insensitive" } }] }] } : {}),
   };
   const [items, total] = await Promise.all([
     prisma.product.findMany({
@@ -126,7 +128,7 @@ export async function createOrder(businessId: string, employeeId: string, input:
   await assertSeller(businessId, input.sellerBusinessId);
   const ids = [...new Set(input.items.map((i) => i.productId))];
   if (ids.length !== input.items.length) throw ApiError.badRequest("Бир товар тизмеде эки жолу турат.");
-  const products = await prisma.product.findMany({ where: { ...listedProduct(input.sellerBusinessId), id: { in: ids } } });
+  const products = await prisma.product.findMany({ where: { ...listedProducts(input.sellerBusinessId), id: { in: ids } } });
   if (products.length !== ids.length) throw ApiError.badRequest("Айрым товарлар азыр оптомго жеткиликсиз. Тизмени жаңыртыңыз.");
   const byId = new Map(products.map((p) => [p.id, p]));
   const employee = await prisma.employee.findUniqueOrThrow({ where: { id: employeeId }, include: { user: { select: { name: true } } } });
@@ -184,6 +186,9 @@ const BUYER_MOVES: Partial<Record<WholesaleOrderStatus, WholesaleOrderStatus[]>>
  * - seller, on SHIPPED: records the goods leaving as a wholesale sale in the seller's books;
  * - buyer, on RECEIVED: books the goods in as a purchase receipt (matched to the buyer's
  *   products by barcode), owed to the wholesaler as a supplier debt.
+ *
+ * The new status is claimed *before* any goods are booked: of two clicks at
+ * once only one gets to book, and a booking that fails hands the status back.
  */
 export async function changeStatus(businessId: string, employeeId: string, role: Role, id: string, input: WholesaleStatusInput) {
   const order = await prisma.wholesaleOrder.findFirst({ where: { id, ...visibleWhere(businessId, role) }, include: orderInclude });
@@ -194,20 +199,54 @@ export async function changeStatus(businessId: string, employeeId: string, role:
   if (isSeller && !hasPermission(role, "wholesale.sell")) throw ApiError.forbidden();
   if (!isSeller && !hasPermission(role, "wholesale.buy")) throw ApiError.forbidden();
 
+  const { count } = await prisma.wholesaleOrder.updateMany({
+    where: { id, status: order.status },
+    data: { status: input.status, ...(isSeller && input.note !== undefined ? { sellerNote: input.note || null } : {}) },
+  });
+  if (count === 0) throw ApiError.conflict("Заказды башка бирөө өзгөртүп койду. Баракты жаңыртыңыз.");
+
+  let unmatched: UnmatchedItem[] = [];
+  try {
+    const booked = await bookGoods(order, businessId, employeeId, role, isSeller, input);
+    unmatched = booked.unmatched;
+    if (booked.saleId || booked.receiptId) {
+      await prisma.wholesaleOrder.update({
+        where: { id },
+        data: { ...(booked.saleId ? { saleId: booked.saleId } : {}), ...(booked.receiptId ? { receiptId: booked.receiptId } : {}) },
+      });
+    }
+  } catch (error) {
+    await prisma.wholesaleOrder.updateMany({ where: { id, status: input.status }, data: { status: order.status, sellerNote: order.sellerNote } });
+    throw error;
+  }
+  return { order: await getOrder(businessId, role, id), unmatched };
+}
+
+type UnmatchedItem = { name: string; barcode: string | null; quantity: number };
+
+/** The stock side of a status change: the seller's sale or the buyer's receipt. */
+async function bookGoods(order: OrderRow, businessId: string, employeeId: string, role: Role, isSeller: boolean, input: WholesaleStatusInput) {
   let saleId: string | undefined;
   let receiptId: string | undefined;
-  let unmatched: { name: string; barcode: string | null; quantity: number }[] = [];
+  let unmatched: UnmatchedItem[] = [];
 
   if (isSeller && input.status === "SHIPPED" && input.recordSale) {
-    const sale = await createSale(businessId, employeeId, role, {
-      items: order.items.map((i) => ({ productId: i.productId, quantity: toNumber(i.quantity) })),
-      discount: 0,
-      paymentMethod: input.paymentMethod ?? "CASH",
-      customerId: null,
-      locationId: null,
-      priceLevel: "WHOLESALE",
-      prescriptionConfirmed: true,
-    });
+    const sale = await createSale(
+      businessId,
+      employeeId,
+      role,
+      {
+        items: order.items.map((i) => ({ productId: i.productId, quantity: toNumber(i.quantity) })),
+        discount: 0,
+        paymentMethod: input.paymentMethod ?? "CASH",
+        customerId: null,
+        locationId: null,
+        priceLevel: "WHOLESALE",
+        prescriptionConfirmed: true,
+      },
+      // The price the two shops agreed on, even if the list price moved since.
+      new Map(order.items.map((i) => [i.productId, toNumber(i.price)])),
+    );
     saleId = sale.id;
   }
 
@@ -240,17 +279,7 @@ export async function changeStatus(businessId: string, employeeId: string, role:
     }
   }
 
-  const { count } = await prisma.wholesaleOrder.updateMany({
-    where: { id, status: order.status },
-    data: {
-      status: input.status,
-      ...(isSeller && input.note !== undefined ? { sellerNote: input.note || null } : {}),
-      ...(saleId ? { saleId } : {}),
-      ...(receiptId ? { receiptId } : {}),
-    },
-  });
-  if (count === 0) throw ApiError.conflict("Заказды башка бирөө өзгөртүп койду. Баракты жаңыртыңыз.");
-  return { order: await getOrder(businessId, role, id), unmatched };
+  return { saleId, receiptId, unmatched };
 }
 
 /** New orders waiting for this wholesaler — for the badge. */
