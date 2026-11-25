@@ -88,25 +88,25 @@
 }
 
 /* Bright KPI tiles */
-.stat-tile-grid {
+.analytics-tile-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-5);
 }
 
 @media (max-width: 1100px) {
-  .stat-tile-grid {
+  .analytics-tile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 560px) {
-  .stat-tile-grid {
+  .analytics-tile-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.stat-tile {
+.analytics-tile {
   position: relative;
   overflow: hidden;
   display: flex;
@@ -120,24 +120,24 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.stat-tile:hover {
+.analytics-tile:hover {
   transform: translateY(-3px);
   box-shadow: 0 16px 30px -12px var(--tile-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.stat-tile-blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); --tile-shadow: rgba(29, 78, 216, 0.6); }
-.stat-tile-green { background: linear-gradient(135deg, #10b981, #047857); --tile-shadow: rgba(4, 120, 87, 0.6); }
-.stat-tile-orange { background: linear-gradient(135deg, #f97316, #c2410c); --tile-shadow: rgba(194, 65, 12, 0.6); }
-.stat-tile-violet { background: linear-gradient(135deg, #8b5cf6, #5b21b6); --tile-shadow: rgba(91, 33, 182, 0.6); }
-.stat-tile-red { background: linear-gradient(135deg, #ef4444, #991b1b); --tile-shadow: rgba(153, 27, 27, 0.6); }
+.analytics-tile-blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); --tile-shadow: rgba(29, 78, 216, 0.6); }
+.analytics-tile-green { background: linear-gradient(135deg, #10b981, #047857); --tile-shadow: rgba(4, 120, 87, 0.6); }
+.analytics-tile-orange { background: linear-gradient(135deg, #f97316, #c2410c); --tile-shadow: rgba(194, 65, 12, 0.6); }
+.analytics-tile-violet { background: linear-gradient(135deg, #8b5cf6, #5b21b6); --tile-shadow: rgba(91, 33, 182, 0.6); }
+.analytics-tile-red { background: linear-gradient(135deg, #ef4444, #991b1b); --tile-shadow: rgba(153, 27, 27, 0.6); }
 
-.stat-tile-label {
+.analytics-tile-label {
   font-size: var(--font-size-sm);
   font-weight: 600;
   opacity: 0.92;
 }
 
-.stat-tile-icon {
+.analytics-tile-icon {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
@@ -148,7 +148,7 @@
   flex-shrink: 0;
 }
 
-.stat-tile-value {
+.analytics-tile-value {
   position: relative;
   z-index: 1;
   font-size: var(--font-size-2xl);
@@ -156,7 +156,7 @@
   letter-spacing: -0.01em;
 }
 
-.stat-tile-trend {
+.analytics-tile-trend {
   position: relative;
   z-index: 1;
   align-self: flex-start;
@@ -170,7 +170,7 @@
   font-weight: 700;
 }
 
-.stat-tile-deco {
+.analytics-tile-deco {
   position: absolute;
   right: 14px;
   bottom: 10px;

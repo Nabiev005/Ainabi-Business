@@ -16,7 +16,15 @@ function addMonths(date: Date, months: number) {
 // Create sale
 // ---------------------------------------------------------------------------
 
-export async function createSale(businessId: string, employeeId: string, role: Role, input: CreateSaleInput) {
+/** `agreedPrices` (product id → price of one base unit) is for sales whose
+ * price was fixed earlier, e.g. a wholesale order; never taken from a request. */
+export async function createSale(
+  businessId: string,
+  employeeId: string,
+  role: Role,
+  input: CreateSaleInput,
+  agreedPrices?: Map<string, number>,
+) {
   const productIds = [...new Set(input.items.map((i) => i.productId))];
   const [products, business] = await Promise.all([
     prisma.product.findMany({ where: { id: { in: productIds }, businessId }, include: { packages: true, stage: true } }),
@@ -34,9 +42,10 @@ export async function createSale(businessId: string, employeeId: string, role: R
     throw ApiError.badRequest(`"${blocked.name}" азырынча "${blocked.stage!.name}" этабында — сатууга болбойт.`);
   }
 
-  if (input.customerId) {
-    const customer = await prisma.customer.findFirst({ where: { id: input.customerId, businessId } });
-    if (!customer) throw ApiError.notFound("Кардар табылган жок.");
+  const customer = input.customerId ? await prisma.customer.findFirst({ where: { id: input.customerId, businessId } }) : null;
+  if (input.customerId && !customer) throw ApiError.notFound("Кардар табылган жок.");
+  if (input.priceLevel === "WHOLESALE" && !customer?.isWholesale && !hasPermission(role, "prices.wholesale")) {
+    throw ApiError.forbidden("Оптом баа «оптом кардар» деп белгиленген кардарга гана берилет.");
   }
 
   const shift = await findOpenShift(prisma, businessId, employeeId);
@@ -77,7 +86,9 @@ export async function createSale(businessId: string, employeeId: string, role: R
 
     const factor = pkg ? toNumber(pkg.factor) : 1;
     const baseQuantity = Math.round(item.quantity * factor * 1000) / 1000;
-    const unitPrice = wholesale && product.wholesalePrice !== null ? toNumber(product.wholesalePrice) : toNumber(product.salePrice);
+    const unitPrice =
+      agreedPrices?.get(product.id) ??
+      (wholesale && product.wholesalePrice !== null ? toNumber(product.wholesalePrice) : toNumber(product.salePrice));
     // Price of one *sold* unit (a package, or one base unit).
     const price = pkg
       ? !wholesale && pkg.salePrice !== null
@@ -393,6 +404,46 @@ export async function findBySerial(businessId: string, serial: string) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Money rules for returning goods that were sold on credit. Locks the debt
+ * row first, so a payment or another return arriving at the same moment
+ * waits and then sees the new figures.
+ */
+async function checkDebtRefund(tx: Prisma.TransactionClient, saleId: string, debtId: string, method: string, total: number) {
+  await tx.$queryRaw`SELECT "id" FROM "debts" WHERE "id" = ${debtId} FOR UPDATE`;
+  const debt = await tx.debt.findUniqueOrThrow({ where: { id: debtId } });
+  const remaining = toNumber(debt.remainingAmount);
+
+  if (method === "DEBT") {
+    if (total > remaining + 0.001) {
+      throw ApiError.badRequest("Кайтарылуучу сумма калган карыздан ашат. Акчаны башка жол менен кайтарыңыз.");
+    }
+    return;
+  }
+  // Only money the customer actually paid in can be handed back.
+  const refunded = await tx.saleReturn.aggregate({ where: { saleId, refundMethod: { not: "DEBT" } }, _sum: { total: true } });
+  const refundable = round2(Math.max(0, toNumber(debt.paidAmount) - toNumber(refunded._sum.total)));
+  if (total > refundable + 0.001) {
+    throw ApiError.badRequest(
+      `Бул сатуунун карызы төлөнгөн эмес: колго эң көп ${refundable} сом кайтарылат, калган карыз ${remaining} сом. «Карыздан кемитүү» тандаңыз же адегенде калган карызды төлөм катары жазыңыз.`,
+    );
+  }
+}
+
+/** Takes returned goods off the payment plan, last payments first, so the
+ * plan always adds up to what the customer still owes in total. */
+async function shrinkInstallments(tx: Prisma.TransactionClient, debtId: string, amount: number) {
+  let left = amount;
+  const rows = await tx.debtInstallment.findMany({ where: { debtId }, orderBy: { position: "desc" } });
+  for (const row of rows) {
+    if (left <= 0) break;
+    const cut = Math.min(left, toNumber(row.amount));
+    left = round2(left - cut);
+    if (cut >= toNumber(row.amount)) await tx.debtInstallment.delete({ where: { id: row.id } });
+    else await tx.debtInstallment.update({ where: { id: row.id }, data: { amount: { decrement: cut } } });
+  }
+}
+
+/**
  * A customer brings goods back. Stock returns to the shelf (at the sale's
  * branch), returned IMEIs become sellable again, and the money goes back
  * either in cash/card/QR or — for a sale on credit — comes off the
@@ -453,18 +504,15 @@ export async function createReturn(businessId: string, employeeId: string, saleI
   const total = round2(lines.reduce((s, l) => s + l.total, 0));
   const costTotal = round2(lines.reduce((s, l) => s + l.costTotal, 0));
 
-  if (input.refundMethod === "DEBT") {
-    if (!sale.debt) throw ApiError.badRequest("Бул сатуу карызга болгон эмес.");
-    if (total > toNumber(sale.debt.remainingAmount) + 0.001) {
-      throw ApiError.badRequest("Кайтарылуучу сумма калган карыздан ашат. Акчаны башка жол менен кайтарыңыз.");
-    }
-  }
+  if (input.refundMethod === "DEBT" && !sale.debt) throw ApiError.badRequest("Бул сатуу карызга болгон эмес.");
 
   const shift = await findOpenShift(prisma, businessId, employeeId);
   const locationId = sale.locationId ?? (await getDefaultLocation(prisma, businessId)).id;
 
   const saleReturn = await prisma.$transaction(
     async (tx) => {
+      if (sale.debt) await checkDebtRefund(tx, sale.id, sale.debt.id, input.refundMethod, total);
+
       const created = await tx.saleReturn.create({
         data: {
           businessId,
@@ -527,15 +575,15 @@ export async function createReturn(businessId: string, employeeId: string, saleI
       await tx.sale.update({ where: { id: saleId }, data: { returnedTotal: { increment: total } } });
 
       if (input.refundMethod === "DEBT" && sale.debt) {
-        const remaining = round2(toNumber(sale.debt.remainingAmount) - total);
-        await tx.debt.update({
+        const debt = await tx.debt.update({
           where: { id: sale.debt.id },
-          data: {
-            totalAmount: { decrement: total },
-            remainingAmount: remaining,
-            status: remaining <= 0 ? "PAID" : toNumber(sale.debt.paidAmount) > 0 ? "PARTIAL" : "OPEN",
-          },
+          data: { totalAmount: { decrement: total }, remainingAmount: { decrement: total } },
         });
+        await tx.debt.update({
+          where: { id: debt.id },
+          data: { status: toNumber(debt.remainingAmount) <= 0 ? "PAID" : toNumber(debt.paidAmount) > 0 ? "PARTIAL" : "OPEN" },
+        });
+        await shrinkInstallments(tx, debt.id, total);
       }
 
       return created;

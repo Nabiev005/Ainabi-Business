@@ -454,7 +454,9 @@ export default function Pos() {
   const total = Math.max(0, subtotal - appliedDiscount);
   const change = paymentMethod === "CASH" && cashGiven !== "" ? Number(cashGiven) - total : null;
   const needsPrescription = !!business?.checkPrescription && cart.some((l) => l.product.prescriptionRequired);
-  const hasWholesale = cart.some((l) => l.product.wholesalePrice !== null) || selectedCustomer?.isWholesale;
+  // Sellers get the wholesale price only for customers marked as wholesale.
+  const hasWholesale =
+    selectedCustomer?.isWholesale || (sessionCan(session, "prices.wholesale") && cart.some((l) => l.product.wholesalePrice !== null));
 
   async function completeSale(prescriptionConfirmed = false) {
     if (cart.length === 0) return;

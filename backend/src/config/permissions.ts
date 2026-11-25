@@ -32,6 +32,10 @@ export const PERMISSIONS = {
   "returns.view": ["OWNER", "ACCOUNTANT", "REGISTRAR"],
   // Everyone else is capped at Business.maxDiscountPercent per receipt.
   "discounts.unlimited": MANAGEMENT,
+  // Give the wholesale price to anyone, and mark customers as wholesale.
+  // Everyone else gets it only for customers already marked — otherwise the
+  // wholesale button would be a way around the discount cap.
+  "prices.wholesale": MANAGEMENT,
 
   // Open/close one's own shift, cash in/out.
   "shifts.use": ["OWNER", "ADMIN", "CASHIER"],

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { toNumber } from "../utils/money";
+import { ensureFreshPrices } from "./currency.service";
 import type { CatalogSettingsInput } from "../validators/settings.validator";
 
 /**
@@ -51,6 +52,8 @@ export async function publicCatalog(slug: string, query: { search?: string; cate
     select: { id: true, name: true, address: true, phone: true, catalogWhatsapp: true, catalogShowStock: true, catalogNote: true },
   });
   if (!shop) throw ApiError.notFound("Каталог табылган жок.");
+  // Dollar-priced goods follow today's rate; never worth failing the page for.
+  await ensureFreshPrices(shop.id).catch((error) => console.error("Price refresh failed:", error));
 
   const search = query.search?.trim();
   const where: Prisma.ProductWhereInput = {
@@ -73,7 +76,7 @@ export async function publicCatalog(slug: string, query: { search?: string; cate
     }),
     prisma.product.count({ where }),
     prisma.category.findMany({
-      where: { businessId: shop.id, products: { some: { status: "ACTIVE", quantity: { gt: 0 } } } },
+      where: { businessId: shop.id, products: { some: { status: "ACTIVE", quantity: { gt: 0 }, OR: [{ stageId: null }, { stage: { blocksSale: false } }] } } },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

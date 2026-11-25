@@ -40,7 +40,7 @@
       property="og:description"
       content="Товар, сатуу, склад жана карыз эсебин бир жерден башкарыңыз. Кыргызстандагы бизнес үчүн жасалган."
     />
-    <meta property="og:image" content="/og-banner.png" />
+    <meta property="og:image" content="https://business.ainabi.site/og-banner.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
@@ -48,7 +48,27 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Ainabi Business — Бизнесиңиздин эсеби бир жерде" />
     <meta name="twitter:description" content="Товар, сатуу, склад жана карыз эсебин бир жерден башкарыңыз." />
-    <meta name="twitter:image" content="/og-banner.png" />
+    <meta name="twitter:image" content="https://business.ainabi.site/og-banner.png" />
+
+    <!-- One address in Google: whatever host serves the page (the old
+         *.vercel.app one too), its canonical URL is on business.ainabi.site.
+         Set by script because every route shares this one HTML file. -->
+    <script>
+      (function () {
+        var link = document.createElement("link");
+        link.rel = "canonical";
+        link.href = "https://business.ainabi.site" + location.pathname;
+        document.head.appendChild(link);
+      })();
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Ainabi Business",
+        "url": "https://business.ainabi.site/"
+      }
+    </script>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>

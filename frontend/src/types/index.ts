@@ -14,6 +14,7 @@ export type Permission =
   | "returns.view"
   | "stock.stale"
   | "discounts.unlimited"
+  | "prices.wholesale"
   | "shifts.use"
   | "shifts.viewAll"
   | "repairs.manage"

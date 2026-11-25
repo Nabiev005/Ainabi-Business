@@ -15,13 +15,13 @@ export const getHandler = asyncHandler(async (req: Request, res: Response) => {
 
 export const createHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = customerSchema.parse(req.body);
-  const customer = await customerService.createCustomer(req.auth!.businessId, input);
+  const customer = await customerService.createCustomer(req.auth!.businessId, req.auth!.role, input);
   res.status(201).json(customer);
 });
 
 export const updateHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = customerSchema.parse(req.body);
-  const customer = await customerService.updateCustomer(req.auth!.businessId, req.params.id, input);
+  const customer = await customerService.updateCustomer(req.auth!.businessId, req.auth!.role, req.params.id, input);
   res.json(customer);
 });
 

@@ -36,22 +36,22 @@ function StatTile({ label, value, change, icon: Icon, tone, index }: StatTilePro
   const { t } = useTranslation();
   const TrendIcon = change === null || change === 0 ? Minus : change > 0 ? TrendingUp : TrendingDown;
   return (
-    <div className={`stat-tile stat-tile-${tone} animate-in`} style={{ animationDelay: `${index * 60}ms` }}>
+    <div className={`analytics-tile analytics-tile-${tone} animate-in`} style={{ animationDelay: `${index * 60}ms` }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-        <span className="stat-tile-label">{label}</span>
-        <span className="stat-tile-icon">
+        <span className="analytics-tile-label">{label}</span>
+        <span className="analytics-tile-icon">
           <Icon size={18} />
         </span>
       </div>
-      <span className="stat-tile-value mono-num">{value}</span>
+      <span className="analytics-tile-value mono-num">{value}</span>
       {change !== null && (
-        <span className="stat-tile-trend">
+        <span className="analytics-tile-trend">
           <TrendIcon size={13} />
           {change > 0 ? "+" : ""}
           {change}% {t("common.kpiTrendSuffix")}
         </span>
       )}
-      <svg className="stat-tile-deco" viewBox="0 0 72 48" aria-hidden="true">
+      <svg className="analytics-tile-deco" viewBox="0 0 72 48" aria-hidden="true">
         {[14, 26, 20, 38].map((h, i) => (
           <g key={i} transform={`translate(${i * 17} 0)`}>
             <path d={`M10,${46 - h} l5,-4 v${h} l-5,4 z`} fill="rgba(0,0,0,0.18)" />
@@ -130,14 +130,14 @@ export default function Analytics() {
           <EmptyState title={t("reports.selectRange")} subtitle={t("reports.selectRangeSubtitle")} />
         </div>
       ) : !data || !s ? (
-        <div className="stat-tile-grid">
+        <div className="analytics-tile-grid">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} height={140} radius="20px" />
           ))}
         </div>
       ) : (
         <>
-          <div className="stat-tile-grid">
+          <div className="analytics-tile-grid">
             <StatTile index={0} tone="blue" label={t("analytics.kpi.revenue")} value={formatMoney(s.revenue)} change={data.changes.revenue} icon={TrendingUp} />
             <StatTile index={1} tone="green" label={t("analytics.kpi.grossProfit")} value={formatMoney(s.grossProfit)} change={data.changes.grossProfit} icon={ShoppingBag} />
             <StatTile index={2} tone="orange" label={t("analytics.kpi.expenses")} value={formatMoney(s.expenses)} change={data.changes.expenses} icon={Receipt} />
