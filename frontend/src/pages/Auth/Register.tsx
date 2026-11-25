@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import { extractErrorMessage } from "../../services/api";
+import { isNativeApp } from "../../utils/native";
 import "./Auth.css";
 
 // Must match the template ids in backend/src/config/businessTemplates.ts.
@@ -67,8 +68,13 @@ export default function Register() {
             <p className="auth-subtitle">{t("auth.register.subtitle")}</p>
           </div>
 
-          <GoogleSignInButton onSuccess={() => { showToast({ variant: "success", title: t("auth.register.successTitle"), message: t("auth.register.successMessage") }); navigate("/dashboard"); }} />
-          <div className="auth-divider">{t("auth.register.orEmail")}</div>
+          {/* Google refuses to sign in inside an app WebView ("disallowed_useragent"). */}
+          {!isNativeApp() && (
+            <>
+              <GoogleSignInButton onSuccess={() => { showToast({ variant: "success", title: t("auth.register.successTitle"), message: t("auth.register.successMessage") }); navigate("/dashboard"); }} />
+              <div className="auth-divider">{t("auth.register.orEmail")}</div>
+            </>
+          )}
 
           <form className="stack gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="field">

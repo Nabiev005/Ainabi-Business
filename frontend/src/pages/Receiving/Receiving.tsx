@@ -20,6 +20,7 @@ import * as categoryService from "../../services/category.service";
 import * as productService from "../../services/product.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatDateTime, formatMoney, formatNumber, unitLabel } from "../../utils/format";
+import { parseSerials } from "../../utils/serials";
 import type { Category, Customer, Product, PurchaseReceiptDetail, PurchaseReceiptListItem, Supplier } from "../../types";
 import "./Receiving.css";
 
@@ -32,13 +33,6 @@ interface Line {
   expiryDate: string;
   /** One IMEI / serial per line of the textarea. */
   serialsText: string;
-}
-
-function parseSerials(text: string) {
-  return text
-    .split(/[\n,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 export default function Receiving() {

@@ -116,13 +116,24 @@ Git тарыхы боюнча, эскиден жаңыга карай:
 
 18. **Telegram бот `@ainabi_business_bot` (2026-10-09):** Настройкалар → Telegram (бир жолку `/start` коду менен туташуу), кечки отчет 21:00 (Vercel Cron, `vercel.json` → `/api/telegram/cron/daily`, `CRON_SECRET`), шашылыш кабарлар (кассада жетишпестик, жаңы оптом заказ), AI жандырылса ботко суроо. Код: `utils/telegram.ts`, `services/telegram.service.ts`, `routes/telegram.routes.ts`. Webhook биринчи жолу Telegram картасы ачылганда өзү коюлат.
 
+19. **Жаңы лого жана Android тиркемеси (2026-10-19):**
+    - Лого: `components/BrandLogo.tsx` (`BrandIcon`, `BrandLogo`), булагы `frontend/public/favicon.svg`. Favicon, PWA иконкалары жана `og-banner.png` ошондон түзүлгөн. Лендингдеги скриншот `app-preview.png` файлына көчтү (анда али эски «AB» бар — deploy'дон кийин жаңы скриншот керек).
+    - `mobile/`: Capacitor 8, тиркеме жандуу сайтты ачат (`business.ainabi.site`), appId `site.ainabi.business`. Иконкалар: `npm run icons`. Gradle 9.1 (Android Studio'нун Java 25'и үчүн). Чоо-жайы `mobile/README.md`'де.
+20. **Телефондо чыныгы тиркемедей (2026-10-20):**
+    - ≤768px: ылдыйкы таб-бар (`layouts/MobileTabBar.tsx`, ролго жараша 4 бет + «Меню»), header — логотип + бизнестин аты, издөө баскычы толук экрандуу издөөнү ачат; тил тандоо Настройкаларда.
+    - ≤640px: `Modal` ылдыйдан чыгат (bottom sheet), `Drawer` толук экран, toast'тар үстүдө. Инпуттар 16px (iPhone фокуста масштабды чоңойтпосун).
+    - Safe-area: `--safe-top/--safe-bottom` (`styles/tokens.css`), `viewport-fit=cover`, iPhone PWA мета-тегдер, `index.html`'де жүктөлүү логотиби.
+    - POS: себет ылдыйда калганда калкып турган «себетке өтүү» тилкеси (portal — `.route-transition` transform'у fixed'ди бузат).
+    - Тиркеме: `@capacitor/app` менен Android артка баскычы (`components/NativeBackButton.tsx`, ачык терезелер `hooks/useBackButton.ts` аркылуу жабылат), SystemBars edge-to-edge, жарык тема, `AinabiApp` user-agent, тиркемеде лендинг жана Google баскычы жок. `versionCode 2` — **жаңы APK керек**.
+    - Эскертүү: `layout.css` `components.css`'тен **мурун** жүктөлөт — `.btn`/`.stack` классы бар элементти жашыруу үчүн `.header .x` сыяктуу күчтүүрөөк селектор керек.
+
 ## Сүйлөшүүлөрдөн чыккан чечимдер жана контекст
 
 **Колдонуучу:** долбоордун ээси (Айбек), кыргызча жазат — жоопторду кыргызча бериңиз. Система бизнесмендерге **ижарага берилген** (чыныгы кардарлар бар), ошондуктан коопсуздук жана маалыматтын сакталышы биринчи орунда.
 
 **Инфраструктура (2026-10-08/09 абалы):**
 - **Neon:** долбоор `ainabi-business` (muddy-surf-82139639), Франкфурт. **Launch** тарифине өтүлдү; `production` бутагы **корголгон**; History window **7 күн**; бэкап бутактары: `backup-2026-10-03`, `before-subscriptions`, `before-security-2026-10-08` (7 күндөн кийин өзү өчөт). Updates убактысын түнкү саатка (20:00–21:00 UTC) которуу, Spending notification жана 2FA — ээси өзү бүтүрүшү керек.
-- **Vercel:** командасы `aibeks-projects-1f2df11d`, долбоор `ainabi-business`, Hobby. ⚠️ **Чечилбеген көйгөй:** бул долбоордун Environment Variables'ында `DATABASE_URL`, JWT, `CLIENT_URL`, Google ж.б. **жок** (Project жана Shared табдары бош) — ошондуктан PR #10 (`8588d78`) Production deploy'у `P1012 ... DATABASE_URL not found` менен кулап жатат. Иштеп турган сайт `https://ainabi-business.vercel.app` — ал **башка Vercel долбоорунда** болушу мүмкүн (ката берген deploy'дордо бул домен жок). Кийинки кадам: Domains бетин жана командалар/долбоорлор тизмесин текшерүү; эгер эски долбоор табылса, `TELEGRAM_BOT_TOKEN` + `CRON_SECRET`ти ошол жакка коюу; табылбаса — бардык өзгөрмөлөрдү ушул долбоорго кайра кошуу (тизме DEPLOYMENT.md'де; JWT жаңыланса баары кайра кирет; `GOOGLE_CLIENT_ID` сөзсүз — платформа админи Google менен гана кирет).
+- **Vercel:** командасы `aibeks-projects-1f2df11d`, долбоор `ainabi-business`, Hobby. ⚠️ **Чечилбеген көйгөй:** бул долбоордун Environment Variables'ында `DATABASE_URL`, JWT, `CLIENT_URL`, Google ж.б. **жок** (Project жана Shared табдары бош) — ошондуктан PR #10 (`8588d78`) Production deploy'у `P1012 ... DATABASE_URL not found` менен кулап жатат. Негизги домен — `https://business.ainabi.site` (сайт + `/api`, Vercel; Android тиркемеси ушул даректи ачат). Эски `https://ainabi-business.vercel.app` да иштейт — ал **башка Vercel долбоорунда** болушу мүмкүн (ката берген deploy'дордо бул домен жок). Кийинки кадам: Domains бетин жана командалар/долбоорлор тизмесин текшерүү; эгер эски долбоор табылса, `TELEGRAM_BOT_TOKEN` + `CRON_SECRET`ти ошол жакка коюу; табылбаса — бардык өзгөрмөлөрдү ушул долбоорго кайра кошуу (тизме DEPLOYMENT.md'де; JWT жаңыланса баары кайра кирет; `GOOGLE_CLIENT_ID` сөзсүз — платформа админи Google менен гана кирет).
 - Бул долбоорго коюлганы: `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `DIRECT_URL` (Production, Secret).
 - Feature-бутакка пуш кылганда Preview deploy да кулайт (базанын өзгөрмөлөрү Production үчүн гана) — бул кадимки нерсе жана чыныгы базаны сынамык миграциядан коргойт.
 - Telegram коммити `c03cd1a` бутакта турат, `main`'ге бириктириле элек (Vercel көйгөйү чечилгенден кийин).
@@ -143,6 +154,7 @@ Git тарыхы боюнча, эскиден жаңыга карай:
 
 ## Калган иштер
 
+- [ ] **Мобилдик тиркеме (эртең улантуу):** ээси iPhone колдонот — азырынча Safari → «На экран Домой». Android APK сыналган жок (эмулятор ачылган жок), чыныгы телефондо текшерүү. Кийинки кадамдар: Play Market үчүн кол коюлган `.aab` + Play Console ($25); iOS үчүн Apple Developer ($99/жыл) + Mac же булут build; тиркемеде Google менен кирүү жана CSV/Excel жүктөө үчүн нативдик плагиндер.
 - [ ] **Vercel өзгөрмөлөрүнүн көйгөйүн чечүү** (жогоруда «Инфраструктура» бөлүгүн караңыз), андан кийин PR #10 жана Telegram коммитин production'го чыгаруу.
 - [ ] Telegram: deploy'дон кийин Настройкалар → Telegram → туташтыруу, кечки отчет келгенин текшерүү (Vercel Cron multi-service түзүлүштө иштейби — текшериле элек).
 - [ ] **Браузерде текшерүү.** Код типтерди текшерүүдөн, тесттерден жана build'ден өттү, бирок локалдык база жок болгондуктан төмөнкүлөр чыныгы маалымат менен ачылып көрүлө элек: статистика бети (3D графиктер, прогноз), Excel файл, паролду калыбына келтирүү.

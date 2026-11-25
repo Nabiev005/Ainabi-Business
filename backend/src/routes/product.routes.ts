@@ -6,6 +6,7 @@ import {
   createHandler,
   createVariantGroupHandler,
   deleteHandler,
+  deleteSerialHandler,
   getAnalogsHandler,
   getByBarcodeHandler,
   getHandler,
@@ -32,6 +33,7 @@ router.get("/:id", view, getHandler);
 router.get("/:id/analogs", view, getAnalogsHandler);
 router.put("/:id/analogs", manage, setAnalogsHandler);
 router.get("/:id/serials", view, listSerialsHandler);
+router.delete("/:id/serials/:serialId", manage, deleteSerialHandler);
 router.get("/:id/batches", view, listBatchesHandler);
 router.post("/", manage, createHandler);
 router.put("/:id", manage, updateHandler);

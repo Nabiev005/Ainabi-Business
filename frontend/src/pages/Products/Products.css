@@ -112,6 +112,10 @@
   font-weight: 600;
   color: var(--color-text-secondary);
 }
+.product-serials-input {
+  min-height: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .product-attr-check {
   display: inline-flex;
   align-items: center;

@@ -149,10 +149,30 @@
     max-width: 85vw;
     transform: translateX(-100%);
     transition: transform var(--transition-base);
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    box-shadow: var(--shadow-lg);
+    user-select: none;
   }
   .sidebar.mobile-open {
     transform: translateX(0);
     width: var(--sidebar-width);
+  }
+  /* The mobile menu is always full width; icon-only mode is a desktop thing. */
+  .sidebar-collapse-btn {
+    display: none;
+  }
+  .sidebar-nav {
+    overscroll-behavior: contain;
+  }
+  .sidebar-link {
+    padding: 11px var(--space-3);
+    font-size: var(--font-size-md);
+  }
+  .sidebar-mobile-overlay {
+    animation: fade-in var(--transition-base);
   }
 }
 
@@ -186,6 +206,9 @@
   position: sticky;
   top: 0;
   z-index: 30;
+  /* Edge-to-edge: the bar's own background runs up under the status bar. */
+  box-sizing: content-box;
+  padding-top: var(--safe-top);
 }
 .header-search {
   flex: 1;
@@ -207,7 +230,8 @@
   background: var(--color-surface);
   border-color: var(--color-primary-500);
 }
-.header-search svg {
+/* Only the box's own icon: result rows have icons of their own. */
+.header-search > svg {
   position: absolute;
   left: var(--space-3);
   top: 50%;
@@ -418,8 +442,25 @@
   font-size: var(--font-size-xs);
   flex-shrink: 0;
 }
-.header-mobile-toggle {
+.header-mobile-toggle,
+.header-search-toggle,
+.header-title,
+.header-search-back {
   display: none;
+}
+.header-title {
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.header-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .header-icon-btn,
 .header-profile,
@@ -433,16 +474,85 @@
 }
 
 @media (max-width: 960px) {
-  .header-mobile-toggle {
+  .header-mobile-toggle,
+  .header-search-toggle {
     display: flex;
   }
   .header-search {
     display: none;
   }
+  /* Search opened from the header button: covers the bar, results below it. */
+  .header-search.mobile-open {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--header-height);
+    max-width: none;
+    padding: 0 var(--space-4) 0 56px;
+    background: var(--color-surface);
+    z-index: 5;
+    animation: fade-in var(--transition-fast);
+  }
+  .header-search.mobile-open > svg {
+    display: none;
+  }
+  .header-search.mobile-open input {
+    padding-left: var(--space-3);
+  }
+  .header-search.mobile-open .header-search-clear {
+    right: calc(var(--space-4) + var(--space-2));
+  }
+  .header-search-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    left: var(--space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text-primary);
+  }
+  .header-search.mobile-open .header-search-results {
+    left: var(--space-2);
+    right: var(--space-2);
+    max-height: calc(100dvh - var(--header-height) - var(--safe-top) - var(--tabbar-height) - var(--safe-bottom) - var(--space-6));
+  }
+}
+.header-search input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.header-search input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+@media (max-width: 768px) {
+  /* App bar: logo + business name; menu, POS and language move to the tab bar / settings. */
+  .header-title {
+    display: flex;
+  }
+  /* ".header" prefix: components.css (.btn, .stack ...) loads after this file. */
+  .header .header-mobile-toggle,
+  .header .header-lang,
+  .header .header-quick-sale,
+  .header > .spacer {
+    display: none;
+  }
+  .header-search input {
+    font-size: 16px;
+  }
 }
 @media (max-width: 640px) {
   .header {
-    padding: 0 var(--space-4);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
     gap: var(--space-2);
   }
   .quick-sale-label {
@@ -453,7 +563,7 @@
   }
 }
 @media (max-width: 480px) {
-  .header-profile-text {
+  .header .header-profile-text {
     display: none;
   }
   .header-profile {
@@ -477,6 +587,76 @@
     padding: var(--space-4);
     gap: var(--space-4);
   }
+}
+
+/* ---------- Bottom tab bar (phones) ---------- */
+.tabbar {
+  display: none;
+}
+@media (max-width: 768px) {
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 35;
+    display: flex;
+    align-items: stretch;
+    height: calc(var(--tabbar-height) + var(--safe-bottom));
+    padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-top: 1px solid var(--color-border);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* Keyboard open: the bar would only eat space above it. */
+  body:has(.page input:not([type="checkbox"], [type="radio"], [type="file"]):focus, .page textarea:focus) .tabbar {
+    display: none;
+  }
+  .page {
+    padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-5));
+  }
+}
+.tabbar-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tabbar-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Material-style pill behind the active icon. */
+.tabbar-item svg {
+  box-sizing: content-box;
+  padding: 4px 18px;
+  border-radius: var(--radius-pill);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+.tabbar-item:active svg {
+  transform: scale(0.9);
+}
+.tabbar-item.active {
+  color: var(--color-primary-600);
+  font-weight: 700;
+}
+.tabbar-item.active svg {
+  background: var(--color-primary-100);
 }
 .page-header {
   display: flex;

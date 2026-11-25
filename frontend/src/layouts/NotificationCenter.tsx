@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Bell, ClipboardList, Lightbulb, PackageX, Wallet } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useBackButton } from "../hooks/useBackButton";
 import { sessionCan } from "../hooks/usePermissions";
 import * as dashboardService from "../services/dashboard.service";
 import * as debtService from "../services/debt.service";
@@ -26,6 +27,7 @@ export function NotificationCenter() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  useBackButton(open, () => setOpen(false));
   const [loading, setLoading] = useState(false);
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
   const [customerDebtTotal, setCustomerDebtTotal] = useState(0);

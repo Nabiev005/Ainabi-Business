@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   Banknote,
   CheckCircle2,
+  ChevronRight,
   CreditCard,
   Layers,
   Minus,
@@ -515,6 +517,18 @@ export default function Pos() {
 
   const productFields = business?.productFields;
 
+  // Phones/tablets stack the cart under a long product grid: a floating bar
+  // jumps to it, and hides once the cart itself is on screen.
+  const cartRef = useRef<HTMLDivElement>(null);
+  const [cartInView, setCartInView] = useState(false);
+  useEffect(() => {
+    const el = cartRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setCartInView(entry.isIntersecting), { threshold: 0.15 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="pos-shell">
       <div className="card pos-catalog">
@@ -606,7 +620,22 @@ export default function Pos() {
         )}
       </div>
 
-      <div className="card pos-cart">
+      {/* Portal: the page's route-transition transform would pin a fixed bar to the page, not the screen. */}
+      {cart.length > 0 &&
+        !cartInView &&
+        createPortal(
+          <button type="button" className="pos-cartbar" onClick={() => cartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <ShoppingCart size={18} />
+            <span className="pos-cartbar-count">{cart.length}</span>
+            <span className="pos-cartbar-total mono-num">{formatMoney(total)}</span>
+            <span className="spacer" />
+            <span>{t("pos.cart.open")}</span>
+            <ChevronRight size={18} />
+          </button>,
+          document.body,
+        )}
+
+      <div className="card pos-cart" ref={cartRef}>
         <div className="pos-cart-header row gap-2">
           <ShoppingCart size={18} className={bumpedKey ? "pop-once" : undefined} />
           <span className="card-title">{t("pos.cart.title")}</span>

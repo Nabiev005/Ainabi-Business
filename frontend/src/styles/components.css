@@ -851,3 +851,93 @@
   margin-left: auto;
   opacity: 0.6;
 }
+
+/* ---------- Phones: native-app patterns ---------- */
+/* Touch screens have no hover: don't leave buttons "lifted" after a tap. */
+@media (hover: none) {
+  .btn-primary:hover:not(:disabled) {
+    transform: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@media (max-width: 768px) {
+  /* iOS zooms the page into any focused field under 16px. */
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Modals become bottom sheets. */
+  .overlay {
+    align-items: flex-end;
+  }
+  .modal,
+  .modal.modal-wide {
+    margin: 0;
+    max-width: none;
+    max-height: calc(100dvh - var(--safe-top) - var(--space-6));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-3) var(--space-5) calc(var(--space-5) + var(--safe-bottom));
+    animation: sheet-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+    overscroll-behavior: contain;
+  }
+  /* Grab handle. */
+  .modal::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--color-border-strong);
+  }
+
+  .drawer {
+    max-width: none;
+  }
+  .drawer-header {
+    padding: calc(var(--space-4) + var(--safe-top)) var(--space-5) var(--space-4);
+  }
+  .drawer-body {
+    padding: var(--space-5);
+    overscroll-behavior: contain;
+  }
+  .drawer-footer {
+    padding: var(--space-4) var(--space-5) calc(var(--space-4) + var(--safe-bottom));
+  }
+  .drawer-footer .btn {
+    flex: 1;
+  }
+
+  .toast-stack {
+    top: calc(var(--safe-top) + var(--space-2));
+    left: var(--space-3);
+    right: var(--space-3);
+  }
+  .toast {
+    min-width: 0;
+    max-width: none;
+    animation-name: toast-drop-in;
+  }
+  .toast-leaving {
+    animation-name: toast-drop-out;
+  }
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes toast-drop-in {
+  from { transform: translateY(-16px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes toast-drop-out {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-16px); opacity: 0; }
+}

@@ -93,6 +93,11 @@ export const listSerialsHandler = asyncHandler(async (req: Request, res: Respons
   res.json(await productService.listSerials(req.auth!.businessId, req.params.id, status));
 });
 
+export const deleteSerialHandler = asyncHandler(async (req: Request, res: Response) => {
+  await productService.deleteSerial(req.auth!.businessId, req.params.id, req.params.serialId);
+  res.status(204).send();
+});
+
 export const listBatchesHandler = asyncHandler(async (req: Request, res: Response) => {
   res.json(await productService.listBatches(req.auth!.businessId, req.params.id));
 });

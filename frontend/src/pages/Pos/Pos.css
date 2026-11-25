@@ -485,3 +485,58 @@
   background: var(--color-primary-600);
   color: var(--color-primary-contrast);
 }
+
+/* ---------- Floating cart bar (cart stacked under the grid) ---------- */
+.pos-cartbar {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .pos-cartbar {
+    position: fixed;
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: calc(var(--space-4) + var(--safe-bottom));
+    z-index: 34;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 54px;
+    padding: 0 var(--space-4);
+    border: none;
+    border-radius: var(--radius-lg);
+    background: var(--color-primary-600);
+    color: var(--color-primary-contrast);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--font-size-md);
+    font-weight: 700;
+    cursor: pointer;
+    animation: fade-in-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .pos-cartbar:active {
+    transform: scale(0.98);
+  }
+}
+@media (max-width: 768px) {
+  .pos-cartbar {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-2));
+  }
+  body:has(.page input:not([type="checkbox"], [type="radio"], [type="file"]):focus, .page textarea:focus) > .pos-cartbar {
+    display: none;
+  }
+}
+.pos-cartbar-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-contrast);
+  color: var(--color-primary-600);
+  font-size: var(--font-size-xs);
+  line-height: 22px;
+  text-align: center;
+}
+.pos-cartbar-total {
+  font-size: var(--font-size-lg);
+}

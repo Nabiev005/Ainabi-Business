@@ -10,6 +10,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
     "@hookform/resolvers": "^3.9.0",
     "axios": "^1.7.7",
     "i18next": "^26.3.6",

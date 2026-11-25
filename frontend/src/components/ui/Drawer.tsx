@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useBackButton } from "../../hooks/useBackButton";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
@@ -14,6 +15,7 @@ interface DrawerProps {
 
 export function Drawer({ open, onClose, title, subtitle, children, footer }: DrawerProps) {
   const { t } = useTranslation();
+  useBackButton(open, onClose);
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {

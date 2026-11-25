@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link2, Package, Plus, Trash2, X } from "lucide-react";
 import { ProductSearchBox } from "../../components/ProductSearchBox";
 import { Badge } from "../../components/ui/Badge";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { useToast } from "../../hooks/useToast";
 import * as productService from "../../services/product.service";
 import { extractErrorMessage } from "../../services/api";
@@ -164,11 +165,28 @@ export function BatchesSection({ productId, unit }: { productId: string; unit: P
 
 export function SerialsSection({ productId }: { productId: string }) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [serials, setSerials] = useState<ProductSerialUnit[] | null>(null);
+  const [target, setTarget] = useState<ProductSerialUnit | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     productService.listSerials(productId, "IN_STOCK").then(setSerials).catch(() => setSerials([]));
   }, [productId]);
+
+  async function remove() {
+    if (!target) return;
+    setDeleting(true);
+    try {
+      await productService.deleteSerial(productId, target.id);
+      setSerials((prev) => (prev ?? []).filter((s) => s.id !== target.id));
+      setTarget(null);
+    } catch (error) {
+      showToast({ variant: "error", title: t("common.deleteFailed"), message: extractErrorMessage(error) });
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (!serials || serials.length === 0) return null;
   return (
@@ -178,9 +196,22 @@ export function SerialsSection({ productId }: { productId: string }) {
         {serials.map((s) => (
           <span key={s.id} className="chip mono-num">
             {s.serial}
+            <button type="button" onClick={() => setTarget(s)} aria-label={t("common.delete")}>
+              <X size={12} />
+            </button>
           </span>
         ))}
       </div>
+      <ConfirmDialog
+        open={!!target}
+        danger
+        loading={deleting}
+        title={t("products.serials.deleteTitle", { serial: target?.serial })}
+        description={t("products.serials.deleteHint")}
+        confirmLabel={t("common.delete")}
+        onConfirm={remove}
+        onCancel={() => setTarget(null)}
+      />
     </div>
   );
 }
