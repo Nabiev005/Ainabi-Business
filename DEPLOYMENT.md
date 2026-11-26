@@ -143,6 +143,42 @@ Vercel GitHub репозиторийиңизди import кылганда `fronte
    папка `.gitignore`'до — **эч качан GitHub'га жүктөбөңүз**, анда
    кардарлардын маалыматы бар. Көчүрмөнү флешкага же жабык дискке сактаңыз.
 
+3. **Автоматтык түнкү бэкап (GitHub Actions).** `.github/workflows/db-backup.yml`
+   күн сайын 03:00 (Бишкек) базаны көчүрөт, бош базага кайра жүктөп текшерет,
+   AES-256 менен шифрлейт жана 30 күн сактайт. Репо ачык болгондуктан
+   шифрленбеген көчүрмө эч жерге жүктөлбөйт. Бир жолу орнотуу:
+
+   - GitHub → репо → **Settings → Secrets and variables → Actions → New repository secret**:
+     - `BACKUP_DATABASE_URL` — Neon'дун **-pooler жок** дареги (`DIRECT_URL` менен бирдей)
+     - `BACKUP_PASSPHRASE` — 20+ белгилүү кокус сыр:
+       `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+   - **Сыр сөздү өзүңүздө сактаңыз** (паролдор менеджери же кагазга). Аны
+     жоготсоңуз, бэкаптарды эч ким ача албайт.
+   - **Actions → Database backup → Run workflow** менен бир жолу кол менен
+     иштетип, жашыл болгонун текшериңиз. Кызыл болсо GitHub email жиберет.
+   - GitHub 60 күн коммит болбогон ачык реподо түнкү иштерди өзү токтотот —
+     ошондой болсо Actions бетинде **Enable workflow** басыңыз.
+
+### Бэкапты калыбына келтирүү
+
+Production базанын үстүнө **түз жазбаңыз**. Адегенде өзүнчө жерге ачып,
+текшерип, анан гана алмаштырыңыз.
+
+1. GitHub → **Actions → Database backup** → керектүү күндүн иштетилиши →
+   ылдый **Artifacts** → `ainabi-db-…` жүктөп алыңыз (ичинде `.dump.gpg`).
+2. Чечмелөө (Git Bash):
+   ```bash
+   gpg --pinentry-mode loopback -o ainabi.dump -d ainabi-ГГГГ-АА-КК_ССММ.dump.gpg
+   ```
+   (`BACKUP_PASSPHRASE` сурайт.)
+3. Neon'до **Branches → New Branch** (мис. `restore-ГГГГ-АА-КК`), анын дарегине:
+   ```bash
+   pg_restore --no-owner --no-privileges --clean --if-exists -d "<жаңы бутактын дареги>" ainabi.dump
+   ```
+4. Ошол бутакка туташып маалыматты текшериңиз. Туура болсо, Neon'до ал бутакты
+   негизги кылыңыз (же Vercel'деги `DATABASE_URL`/`DIRECT_URL`'ди ага которуңуз).
+5. `ainabi.dump` файлын иш бүткөндө өчүрүңүз — ичинде кардарлардын маалыматы бар.
+
 Чоң өзгөрүүнүн алдында (мис. жаңы версияны `main`'ге бириктирерде) Neon'до
 **Branches → Create branch** басыңыз — бул ошол учурдагы базанын заматта
 түзүлгөн көчүрмөсү.
@@ -165,6 +201,7 @@ DATABASE_URL="<prod дареги>" npx tsx scripts/disable-demo-account.ts --app
 ## Акыркы текшерүү (checklist)
 
 - [ ] Neon'до history retention 7+ күн, биринчи `backup-db.sh` көчүрмөсү алынды
+- [ ] GitHub'да `BACKUP_DATABASE_URL` + `BACKUP_PASSPHRASE` коюлду, «Database backup» бир жолу жашыл бүттү
 - [ ] `disable-demo-account.ts` "not in this database" же "Locked" деди
 - [ ] Настройкаларда сатуучунун эң көп скидкасы (%) коюлду (демейки 10%)
 
