@@ -18,6 +18,12 @@ export interface ReorderSuggestion {
   unit: ProductUnit;
   dailyVelocity: number;
   daysUntilStockout: number | null;
+  barcode: string | null;
+  minQuantity: number;
+  /** Enough for two weeks at the recent pace. */
+  suggestedQuantity: number;
+  /** Where it was last bought. */
+  supplier: { id: string; name: string; phone: string | null } | null;
 }
 
 export interface StockSummary {

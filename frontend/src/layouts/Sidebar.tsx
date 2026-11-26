@@ -35,6 +35,7 @@ import {
   Undo2,
   Hourglass,
   ChevronDown,
+  BookmarkCheck,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useBackButton } from "../hooks/useBackButton";
@@ -68,6 +69,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   { to: "/pos", key: "pos", icon: ShoppingCart, group: "sales", show: (s) => can(s, "pos.sell") },
   { to: "/sales", key: "sales", icon: ScrollText, group: "sales", show: (s) => can(s, "sales.view") },
+  { to: "/reservations", key: "reservations", icon: BookmarkCheck, group: "sales", show: (s) => can(s, "reservations.manage") },
   { to: "/shifts", key: "shifts", icon: Coins, group: "sales", show: (s) => can(s, "shifts.use", "shifts.viewAll") },
   { to: "/repairs", key: "repairs", icon: Wrench, group: "sales", show: (s) => !!s.business.enableRepairs && can(s, "repairs.manage"), feature: "repairs" },
   { to: "/returns", key: "returns", icon: Undo2, group: "sales", show: (s) => can(s, "returns.view") },

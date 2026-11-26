@@ -14,6 +14,7 @@ import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatMoney } from "../../utils/format";
 import type { Customer } from "../../types";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useAuth } from "../../hooks/useAuth";
 
 const INACTIVE_DAYS = 30;
 
@@ -26,6 +27,7 @@ function isInactive(c: Customer): boolean {
 export default function Customers() {
   const { t } = useTranslation();
   const { can } = usePermissions();
+  const { session } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[] | null>(null);
@@ -171,6 +173,7 @@ export default function Customers() {
                   <th className="table-cell-num">{t("customers.table.purchases")}</th>
                   <th className="table-cell-num">{t("customers.table.totalSpent")}</th>
                   <th className="table-cell-num">{t("customers.table.debt")}</th>
+                  {session?.business.bonusEnabled && <th className="table-cell-num">{t("customers.table.bonus")}</th>}
                   <th>{t("customers.table.lastPurchase")}</th>
                   <th></th>
                 </tr>
@@ -198,6 +201,7 @@ export default function Customers() {
                     <td className="table-cell-num">{c.purchaseCount}</td>
                     <td className="table-cell-num">{formatMoney(c.totalSpent)}</td>
                     <td className="table-cell-num">{c.debt > 0 ? <Badge variant="danger">{formatMoney(c.debt)}</Badge> : "—"}</td>
+                    {session?.business.bonusEnabled && <td className="table-cell-num">{c.bonusBalance > 0 ? formatMoney(c.bonusBalance) : "—"}</td>}
                     <td className="text-muted">
                       <div className="stack gap-1">
                         <span>{c.lastPurchaseAt ? formatDate(c.lastPurchaseAt) : "—"}</span>

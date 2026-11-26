@@ -76,7 +76,37 @@ export default function CustomerProfile() {
             {formatMoney(totalDebt)}
           </span>
         </div>
+        {(customer.bonusBalance > 0 || customer.bonusHistory.length > 0) && (
+          <div className="card card-pad stack gap-2">
+            <span className="text-muted" style={{ fontSize: "var(--font-size-sm)", fontWeight: 600 }}>{t("customers.profile.bonus")}</span>
+            <span className="mono-num text-success" style={{ fontSize: "var(--font-size-2xl)", fontWeight: 700 }}>{formatMoney(customer.bonusBalance)}</span>
+          </div>
+        )}
       </div>
+
+      {customer.bonusHistory.length > 0 && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">{t("customers.profile.bonusHistory")}</h2>
+          </div>
+          <div className="table-wrap">
+            <table className="table">
+              <tbody>
+                {customer.bonusHistory.map((b) => (
+                  <tr key={b.id}>
+                    <td className="text-muted">{formatDateTime(b.createdAt)}</td>
+                    <td>{t(`customers.profile.bonusTypes.${b.type}`)}{b.saleNumber ? ` · №${b.saleNumber}` : ""}</td>
+                    <td className={`table-cell-num ${b.amount >= 0 ? "text-success" : "text-danger"}`}>
+                      {b.amount >= 0 ? "+" : "−"}
+                      {formatMoney(Math.abs(b.amount))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {customer.notes && (
         <div className="card card-pad">

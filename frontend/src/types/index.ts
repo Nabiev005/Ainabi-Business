@@ -18,6 +18,7 @@ export type Permission =
   | "shifts.use"
   | "shifts.viewAll"
   | "repairs.manage"
+  | "reservations.manage"
   | "products.view"
   | "products.manage"
   | "stock.view"
@@ -121,6 +122,11 @@ export interface Business {
   qrPaymentInfo?: string | null;
   /** Max discount (% of the receipt) a seller may give; owner/manager are unlimited. */
   maxDiscountPercent?: number;
+  /** Loyalty points: earn bonusPercent of what is paid, spend up to bonusMaxSpendPercent of a receipt. */
+  bonusEnabled?: boolean;
+  /** Arrives as a decimal string from the API. */
+  bonusPercent?: number | string;
+  bonusMaxSpendPercent?: number;
   businessType?: string;
   productFields?: ProductFieldDef[];
   trackSerials?: boolean;
@@ -189,6 +195,8 @@ export interface Product {
   packages: ProductPackage[];
   /** Stock at the branch asked for (only when a locationId was passed). */
   locationQuantity?: number;
+  /** Of that, held for reservations — not for sale. */
+  locationReserved?: number;
   status: ProductStatus;
   stockStatus: StockStatus;
   createdAt: string;
@@ -287,6 +295,7 @@ export interface Customer {
   phone: string | null;
   notes: string | null;
   isWholesale: boolean;
+  bonusBalance: number;
   purchaseCount: number;
   totalSpent: number;
   debt: number;
@@ -294,7 +303,8 @@ export interface Customer {
   createdAt: string;
 }
 
-export interface CustomerDetail extends Pick<Customer, "id" | "name" | "phone" | "notes" | "createdAt" | "isWholesale"> {
+export interface CustomerDetail extends Pick<Customer, "id" | "name" | "phone" | "notes" | "createdAt" | "isWholesale" | "bonusBalance"> {
+  bonusHistory: { id: string; type: "EARN" | "SPEND" | "RETURN" | "ADJUST"; amount: number; saleId: string | null; saleNumber: number | null; createdAt: string }[];
   sales: {
     id: string;
     total: number;
@@ -365,10 +375,12 @@ export interface SaleDetail {
   discount: number;
   total: number;
   returnedTotal: number;
+  bonusUsed: number;
+  bonusEarned: number;
   paymentMethod: PaymentMethod;
   priceLevel: "RETAIL" | "WHOLESALE";
   status: string;
-  customer: { id: string; name: string; phone: string | null } | null;
+  customer: { id: string; name: string; phone: string | null; bonusBalance?: number } | null;
   cashierName: string;
   locationName: string | null;
   items: SaleDetailItem[];

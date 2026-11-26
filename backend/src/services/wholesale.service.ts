@@ -243,6 +243,7 @@ async function bookGoods(order: OrderRow, businessId: string, employeeId: string
         locationId: null,
         priceLevel: "WHOLESALE",
         prescriptionConfirmed: true,
+        bonusUsed: 0,
       },
       // The price the two shops agreed on, even if the list price moved since.
       new Map(order.items.map((i) => [i.productId, toNumber(i.price)])),

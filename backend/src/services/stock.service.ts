@@ -611,12 +611,15 @@ export async function writeOffBatch(businessId: string, employeeId: string, batc
 
 const REORDER_LOOKBACK_DAYS = 14;
 const REORDER_URGENCY_DAYS = 7;
+/** A suggested order covers this many days of sales. */
+const REORDER_COVER_DAYS = 14;
 
 /**
- * Estimates how many days of stock are left per product from recent sale
- * velocity (units sold over the last 14 days / 14), and flags anything
- * projected to run out within a week — a step ahead of the plain
- * quantity <= minQuantity low-stock check, which says nothing about *when*.
+ * What to order next: products projected to run out within a week at their
+ * recent sale pace (units sold over the last 14 days / 14), plus anything at
+ * or below its minimum stock. Each comes with a quantity that covers two
+ * weeks and the supplier it was last bought from, so the Stock page can
+ * turn the list into a WhatsApp order per supplier.
  */
 export async function getReorderSuggestions(businessId: string) {
   const since = new Date();
@@ -636,24 +639,43 @@ export async function getReorderSuggestions(businessId: string) {
     soldByProduct.set(item.productId, (soldByProduct.get(item.productId) ?? 0) + net);
   }
 
-  return products
+  const picked = products
     .map((p) => {
       const quantity = toNumber(p.quantity);
-      const soldLast14Days = soldByProduct.get(p.id) ?? 0;
-      const dailyVelocity = round2(soldLast14Days / REORDER_LOOKBACK_DAYS);
+      const minQuantity = toNumber(p.minQuantity);
+      const dailyVelocity = round2((soldByProduct.get(p.id) ?? 0) / REORDER_LOOKBACK_DAYS);
       const daysUntilStockout = dailyVelocity > 0 ? Math.floor(quantity / dailyVelocity) : null;
-      return {
-        productId: p.id,
-        name: p.name,
-        quantity,
-        unit: p.unit,
-        dailyVelocity,
-        daysUntilStockout,
-      };
+      const runningOut = daysUntilStockout !== null && daysUntilStockout <= REORDER_URGENCY_DAYS;
+      const belowMin = minQuantity > 0 && quantity <= minQuantity;
+      const target = Math.max(dailyVelocity * REORDER_COVER_DAYS, minQuantity * 2);
+      const suggestedQuantity = Math.max(1, Math.ceil(target - quantity));
+      return { p, quantity, dailyVelocity, daysUntilStockout, keep: runningOut || belowMin, suggestedQuantity };
     })
-    .filter((p) => p.dailyVelocity > 0 && p.daysUntilStockout !== null && p.daysUntilStockout <= REORDER_URGENCY_DAYS)
-    .sort((a, b) => (a.daysUntilStockout ?? 0) - (b.daysUntilStockout ?? 0))
-    .slice(0, 10);
+    .filter((x) => x.keep)
+    .sort((a, b) => (a.daysUntilStockout ?? 999) - (b.daysUntilStockout ?? 999) || a.quantity - b.quantity)
+    .slice(0, 40);
+
+  // Where each was last bought: the newest incoming movement with a supplier.
+  const lastIn = await prisma.stockMovement.findMany({
+    where: { businessId, productId: { in: picked.map((x) => x.p.id) }, type: "IN", supplierId: { not: null } },
+    orderBy: { createdAt: "desc" },
+    distinct: ["productId"],
+    select: { productId: true, supplier: { select: { id: true, name: true, phone: true } } },
+  });
+  const supplierOf = new Map(lastIn.map((m) => [m.productId, m.supplier]));
+
+  return picked.map((x) => ({
+    productId: x.p.id,
+    name: x.p.name,
+    barcode: x.p.barcode,
+    quantity: x.quantity,
+    minQuantity: toNumber(x.p.minQuantity),
+    unit: x.p.unit,
+    dailyVelocity: x.dailyVelocity,
+    daysUntilStockout: x.daysUntilStockout,
+    suggestedQuantity: x.suggestedQuantity,
+    supplier: supplierOf.get(x.p.id) ?? null,
+  }));
 }
 
 export async function stockSummary(businessId: string) {

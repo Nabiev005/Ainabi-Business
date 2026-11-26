@@ -24,6 +24,7 @@ import assistantRoutes from "./assistant.routes";
 import publicRoutes from "./public.routes";
 import wholesaleRoutes from "./wholesale.routes";
 import telegramRoutes from "./telegram.routes";
+import reservationRoutes from "./reservation.routes";
 
 const router = Router();
 
@@ -52,5 +53,6 @@ router.use("/assistant", assistantRoutes);
 router.use("/public", publicRoutes);
 router.use("/wholesale", wholesaleRoutes);
 router.use("/telegram", telegramRoutes);
+router.use("/reservations", reservationRoutes);
 
 export default router;

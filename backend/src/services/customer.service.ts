@@ -29,6 +29,7 @@ export async function listCustomers(businessId: string, search?: string) {
       phone: c.phone,
       notes: c.notes,
       isWholesale: c.isWholesale,
+      bonusBalance: toNumber(c.bonusBalance),
       purchaseCount: c.sales.length,
       totalSpent,
       debt,
@@ -44,6 +45,7 @@ export async function getCustomer(businessId: string, id: string) {
     include: {
       sales: { orderBy: { createdAt: "desc" }, include: { items: { include: { product: true } } } },
       debts: { orderBy: { createdAt: "desc" }, include: { payments: { orderBy: { createdAt: "desc" } } } },
+      bonusTransactions: { orderBy: { createdAt: "desc" }, take: 30, include: { sale: { select: { number: true } } } },
     },
   });
   if (!customer) throw ApiError.notFound("Кардар табылган жок.");
@@ -54,6 +56,15 @@ export async function getCustomer(businessId: string, id: string) {
     phone: customer.phone,
     notes: customer.notes,
     isWholesale: customer.isWholesale,
+    bonusBalance: toNumber(customer.bonusBalance),
+    bonusHistory: customer.bonusTransactions.map((b) => ({
+      id: b.id,
+      type: b.type,
+      amount: toNumber(b.amount),
+      saleId: b.saleId,
+      saleNumber: b.sale?.number ?? null,
+      createdAt: b.createdAt,
+    })),
     createdAt: customer.createdAt,
     sales: customer.sales.map((s) => ({
       id: s.id,

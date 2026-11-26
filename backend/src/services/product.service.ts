@@ -189,7 +189,7 @@ function productInclude(locationId?: string) {
 }
 
 type ProductWithRelations = Prisma.ProductGetPayload<{ include: ReturnType<typeof productInclude> }> & {
-  stocks?: { quantity: Prisma.Decimal }[];
+  stocks?: { quantity: Prisma.Decimal; reserved: Prisma.Decimal }[];
 };
 
 export function serializeProduct(product: ProductWithRelations) {
@@ -199,6 +199,8 @@ export function serializeProduct(product: ProductWithRelations) {
   const minQuantity = toNumber(product.minQuantity);
   // Only present when a location was asked for.
   const locationQuantity = product.stocks ? toNumber(product.stocks[0]?.quantity) : undefined;
+  // Held there for reservations — on the shelf but not for sale.
+  const locationReserved = product.stocks ? toNumber(product.stocks[0]?.reserved) : undefined;
 
   return {
     id: product.id,
@@ -231,7 +233,7 @@ export function serializeProduct(product: ProductWithRelations) {
       salePrice: p.salePrice === null ? null : toNumber(p.salePrice),
     })),
     quantity,
-    ...(locationQuantity !== undefined ? { locationQuantity } : {}),
+    ...(locationQuantity !== undefined ? { locationQuantity, locationReserved } : {}),
     minQuantity,
     unit: product.unit,
     imageUrl: product.imageUrl,

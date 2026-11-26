@@ -17,6 +17,10 @@ export interface CreateSalePayload {
   locationId?: string | null;
   priceLevel?: "RETAIL" | "WHOLESALE";
   prescriptionConfirmed?: boolean;
+  /** Paid with the customer's loyalty points. */
+  bonusUsed?: number;
+  /** Selling a reservation: its held goods are released into this sale. */
+  reservationId?: string | null;
 }
 
 export interface SaleListQuery {

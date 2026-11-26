@@ -21,7 +21,17 @@ export default function Settings() {
   const { session, updateSessionBusiness } = useAuth();
   const { showToast } = useToast();
   const [business, setBusiness] = useState<Business | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "", currency: "KGS", qrPaymentInfo: "", maxDiscountPercent: 10 });
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    currency: "KGS",
+    qrPaymentInfo: "",
+    maxDiscountPercent: 10,
+    bonusEnabled: false,
+    bonusPercent: 3,
+    bonusMaxSpendPercent: 50,
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -29,7 +39,17 @@ export default function Settings() {
       .getBusiness()
       .then((b) => {
         setBusiness(b);
-        setForm({ name: b.name, phone: b.phone ?? "", address: b.address ?? "", currency: b.currency, qrPaymentInfo: b.qrPaymentInfo ?? "", maxDiscountPercent: b.maxDiscountPercent ?? 10 });
+        setForm({
+          name: b.name,
+          phone: b.phone ?? "",
+          address: b.address ?? "",
+          currency: b.currency,
+          qrPaymentInfo: b.qrPaymentInfo ?? "",
+          maxDiscountPercent: b.maxDiscountPercent ?? 10,
+          bonusEnabled: !!b.bonusEnabled,
+          bonusPercent: Number(b.bonusPercent ?? 3),
+          bonusMaxSpendPercent: b.bonusMaxSpendPercent ?? 50,
+        });
       })
       .catch(() => undefined);
   }, []);
@@ -109,6 +129,41 @@ export default function Settings() {
               onChange={(e) => setForm((f) => ({ ...f, maxDiscountPercent: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) }))}
             />
             <span className="field-hint">{t("settings.maxDiscountPercentHint")}</span>
+          </div>
+          <div className="product-attr-section">
+            <label className="row gap-2" style={{ cursor: "pointer" }}>
+              <input type="checkbox" checked={form.bonusEnabled} onChange={(e) => setForm((f) => ({ ...f, bonusEnabled: e.target.checked }))} />
+              <strong>{t("settings.bonus.enabled")}</strong>
+            </label>
+            <span className="field-hint">{t("settings.bonus.hint")}</span>
+            {form.bonusEnabled && (
+              <div className="form-grid">
+                <div className="field">
+                  <label className="field-label">{t("settings.bonus.percent")}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    step={0.5}
+                    className="input"
+                    value={form.bonusPercent}
+                    onChange={(e) => setForm((f) => ({ ...f, bonusPercent: Math.min(50, Math.max(0, Number(e.target.value) || 0)) }))}
+                  />
+                </div>
+                <div className="field">
+                  <label className="field-label">{t("settings.bonus.maxSpend")}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="input"
+                    value={form.bonusMaxSpendPercent}
+                    onChange={(e) => setForm((f) => ({ ...f, bonusMaxSpendPercent: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) }))}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <button type="submit" className="btn btn-primary" disabled={saving || !business}>

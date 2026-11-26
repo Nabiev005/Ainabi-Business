@@ -60,10 +60,12 @@ export function printSaleReceipt(sale: SaleDetail, business: Business) {
     <table>
       <tr><td>${e(t("print.subtotal"))}</td><td class="num">${e(formatMoney(sale.subtotal))}</td></tr>
       ${sale.discount > 0 ? `<tr><td>${e(t("print.discount"))}</td><td class="num">−${e(formatMoney(sale.discount))}</td></tr>` : ""}
+      ${sale.bonusUsed > 0 ? `<tr><td>${e(t("waMessages.bonusUsed"))}</td><td class="num">−${e(formatMoney(sale.bonusUsed))}</td></tr>` : ""}
       <tr class="total"><td>${e(t("print.total"))}</td><td class="num">${e(formatMoney(sale.total))}</td></tr>
       <tr><td>${e(t("print.payment"))}</td><td class="num">${e(paymentLabels[sale.paymentMethod] ?? sale.paymentMethod)}</td></tr>
       ${sale.returnedTotal > 0 ? `<tr><td>${e(t("print.returned"))}</td><td class="num">−${e(formatMoney(sale.returnedTotal))}</td></tr>` : ""}
     </table>
+    ${sale.bonusEarned > 0 ? `<div class="center muted">${e(t("waMessages.bonusEarned", { amount: formatMoney(sale.bonusEarned) }))}</div>` : ""}
     <hr/>
     <div class="center">${e(t("print.thanks"))}</div>`;
 

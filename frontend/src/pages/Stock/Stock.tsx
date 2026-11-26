@@ -23,6 +23,7 @@ import { Pagination } from "../../components/ui/Pagination";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { StockMovementModal } from "./StockMovementModal";
 import { TransferModal } from "./TransferModal";
+import { ReorderCard } from "./ReorderCard";
 import { useToast } from "../../hooks/useToast";
 import { useAuth } from "../../hooks/useAuth";
 import { sessionCan } from "../../hooks/usePermissions";
@@ -210,49 +211,7 @@ export default function Stock() {
         )}
       </div>
 
-      {reorderSuggestions && reorderSuggestions.length > 0 && (
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <h2 className="card-title">
-                <TrendingDown size={16} style={{ marginRight: 6, verticalAlign: -2 }} />
-                {t("stock.reorder.title")}
-              </h2>
-              <p className="card-subtitle">{t("stock.reorder.subtitle")}</p>
-            </div>
-          </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t("stock.reorder.product")}</th>
-                  <th className="table-cell-num">{t("stock.reorder.currentStock")}</th>
-                  <th className="table-cell-num">{t("stock.reorder.dailySales")}</th>
-                  <th>{t("stock.reorder.eta")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reorderSuggestions.map((r) => (
-                  <tr key={r.productId}>
-                    <td style={{ fontWeight: 600 }}>{r.name}</td>
-                    <td className="table-cell-num">
-                      {formatNumber(r.quantity)} {unitLabel(r.unit)}
-                    </td>
-                    <td className="table-cell-num">
-                      {formatNumber(r.dailyVelocity)} {unitLabel(r.unit)}
-                    </td>
-                    <td>
-                      <Badge variant={r.daysUntilStockout !== null && r.daysUntilStockout <= 2 ? "danger" : "warning"}>
-                        {r.daysUntilStockout === 0 ? t("stock.reorder.etaToday") : t("stock.reorder.etaDays", { days: r.daysUntilStockout })}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {reorderSuggestions && reorderSuggestions.length > 0 && <ReorderCard suggestions={reorderSuggestions} />}
 
       <div className="card">
         <div className="stock-toolbar row gap-3" style={{ flexWrap: "wrap" }}>
