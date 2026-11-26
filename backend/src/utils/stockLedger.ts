@@ -84,18 +84,12 @@ export async function changeStock(db: Db, input: ChangeStockInput) {
 
   if (delta < 0 && requireAvailable) {
     // Conditional decrement: concurrent sales of the last unit can't both
-    // pass — the loser gets count 0 and its transaction rolls back.
-    const { count } = await db.productStock.updateMany({
-      where: { productId, locationId, quantity: { gte: -delta } },
-      data: { quantity: { increment: delta } },
-    });
-    if (count === 0) {
-      const [product, stock] = await Promise.all([
-        db.product.findUnique({ where: { id: productId }, select: { name: true } }),
-        db.productStock.findUnique({ where: { productId_locationId: { productId, locationId } } }),
-      ]);
-      throw ApiError.badRequest(`"${product?.name ?? ""}" складда жетишсиз (калдык: ${toNumber(stock?.quantity)}).`);
-    }
+    // pass — the loser gets count 0 and its transaction rolls back. Goods
+    // held for a reservation don't count as available.
+    const count = await db.$executeRaw`
+      UPDATE "product_stocks" SET "quantity" = "quantity" - ${-delta}::numeric
+      WHERE "productId" = ${productId} AND "locationId" = ${locationId} AND "quantity" - "reserved" >= ${-delta}::numeric`;
+    if (count === 0) await throwNotEnough(db, productId, locationId);
   } else {
     await db.productStock.upsert({
       where: { productId_locationId: { productId, locationId } },
@@ -106,6 +100,35 @@ export async function changeStock(db: Db, input: ChangeStockInput) {
 
   if (updateTotal) {
     await db.product.update({ where: { id: productId }, data: { quantity: { increment: delta } } });
+  }
+}
+
+async function throwNotEnough(db: Db, productId: string, locationId: string): Promise<never> {
+  const [product, stock] = await Promise.all([
+    db.product.findUnique({ where: { id: productId }, select: { name: true } }),
+    db.productStock.findUnique({ where: { productId_locationId: { productId, locationId } } }),
+  ]);
+  const free = Math.max(0, Math.round((toNumber(stock?.quantity) - toNumber(stock?.reserved)) * 1000) / 1000);
+  throw ApiError.badRequest(`"${product?.name ?? ""}" складда жетишсиз (калдык: ${free}).`);
+}
+
+/**
+ * Holds (delta > 0) or gives back (delta < 0) goods for a reservation at one
+ * location. Holding only succeeds while that much is still free.
+ */
+export async function changeReserved(db: Db, input: { businessId: string; productId: string; locationId: string; delta: number }) {
+  const { businessId, productId, locationId, delta } = input;
+  if (delta === 0) return;
+  await ensureStockRows(db, businessId, productId);
+  if (delta > 0) {
+    const count = await db.$executeRaw`
+      UPDATE "product_stocks" SET "reserved" = "reserved" + ${delta}::numeric
+      WHERE "productId" = ${productId} AND "locationId" = ${locationId} AND "quantity" - "reserved" >= ${delta}::numeric`;
+    if (count === 0) await throwNotEnough(db, productId, locationId);
+  } else {
+    await db.$executeRaw`
+      UPDATE "product_stocks" SET "reserved" = GREATEST("reserved" - ${-delta}::numeric, 0)
+      WHERE "productId" = ${productId} AND "locationId" = ${locationId}`;
   }
 }
 
@@ -136,7 +159,7 @@ export async function consumeBatches(db: Db, productId: string, quantity: number
 export async function nextNumber(
   db: Db,
   businessId: string,
-  counter: "saleCounter" | "receiptCounter" | "repairCounter" | "inventoryCounter",
+  counter: "saleCounter" | "receiptCounter" | "repairCounter" | "inventoryCounter" | "reservationCounter",
 ): Promise<number> {
   const business = await db.business.update({
     where: { id: businessId },

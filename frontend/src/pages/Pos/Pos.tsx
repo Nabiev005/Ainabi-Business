@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   Banknote,
+  BookmarkCheck,
   CheckCircle2,
   ChevronRight,
   CreditCard,
   Layers,
+  MessageCircle,
   Minus,
   Package,
   Plus,
@@ -19,6 +21,7 @@ import {
   ShoppingCart,
   Trash2,
   Wallet,
+  X,
 } from "lucide-react";
 import { SkeletonRows } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -35,6 +38,9 @@ import * as categoryService from "../../services/category.service";
 import * as customerService from "../../services/customer.service";
 import * as saleService from "../../services/sale.service";
 import * as shiftService from "../../services/shift.service";
+import * as reservationService from "../../services/reservation.service";
+import type { Reservation } from "../../services/reservation.service";
+import { receiptMessage, whatsappShareLink } from "../../utils/messages";
 import { extractErrorMessage } from "../../services/api";
 import { formatMoney, formatNumber, unitLabel } from "../../utils/format";
 import { buildPaymentQrText, generateQrDataUrl } from "../../utils/qr";
@@ -64,9 +70,10 @@ const PAYMENT_ICONS: Record<PaymentMethod, typeof Banknote> = {
 const PAYMENT_ORDER: PaymentMethod[] = ["CASH", "CARD", "QR", "DEBT"];
 const DECIMAL_UNITS = new Set(["KG", "LITER", "METER"]);
 
-/** What's available to sell here: this branch's stock when known, else the total. */
+/** What's available to sell here: this branch's stock when known (minus what
+ * is held for reservations), else the total. */
 function available(product: Product) {
-  return product.locationQuantity ?? product.quantity;
+  return (product.locationQuantity ?? product.quantity) - (product.locationReserved ?? 0);
 }
 
 function packageOf(line: Pick<CartLine, "product" | "packageId">) {
@@ -261,6 +268,18 @@ export default function Pos() {
   const [prescriptionAsk, setPrescriptionAsk] = useState(false);
   const [lastSale, setLastSale] = useState<SaleDetail | null>(null);
   const [shiftOpen, setShiftOpen] = useState<boolean | null>(null);
+  const [bonusUse, setBonusUse] = useState(0);
+
+  // Selling a reservation (/pos?reservation=…): what it holds here counts as available.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const keepCartOnBranchChange = useRef(false);
+  const allowance = useMemo(() => {
+    const map = new Map<string, number>();
+    if (reservation && reservation.locationId === locationId) for (const i of reservation.items) map.set(i.productId, i.quantity);
+    return map;
+  }, [reservation, locationId]);
+  const avail = useCallback((p: Product) => available(p) + (allowance.get(p.id) ?? 0), [allowance]);
 
   useEffect(() => {
     if (!locationId && myLocation) setLocationId(myLocation.id);
@@ -296,12 +315,50 @@ export default function Pos() {
 
   // Changing branch empties the cart — its stock numbers belong to the old one.
   useEffect(() => {
+    if (keepCartOnBranchChange.current) {
+      keepCartOnBranchChange.current = false;
+      return;
+    }
     setCart([]);
   }, [locationId]);
+
+  const reservationParam = searchParams.get("reservation");
+  useEffect(() => {
+    if (!reservationParam) return;
+    let cancelled = false;
+    reservationService
+      .getReservation(reservationParam)
+      .then(async (r) => {
+        if (r.status !== "ACTIVE") {
+          showToast({ variant: "error", title: t("reservations.notActive") });
+          return;
+        }
+        const products = await Promise.all(r.items.map((i) => productService.getProduct(i.productId, r.locationId)));
+        if (cancelled) return;
+        if (r.locationId !== locationId) keepCartOnBranchChange.current = true;
+        setLocationId(r.locationId);
+        setReservation(r);
+        if (r.customerId) setCustomerId(r.customerId);
+        setCart(products.map((p, index) => ({ key: p.id, product: p, packageId: null, quantity: r.items[index].quantity, serials: [] })));
+        products.forEach((p) => loadSerialSuggestions(p));
+      })
+      .catch((error) => showToast({ variant: "error", title: t("common.loadFailed"), message: extractErrorMessage(error) }));
+    return () => {
+      cancelled = true;
+    };
+    // Only when the link changes; the rest is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationParam]);
+
+  function detachReservation() {
+    setReservation(null);
+    setSearchParams({});
+  }
 
   const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
   useEffect(() => {
     setPriceLevel(selectedCustomer?.isWholesale ? "WHOLESALE" : "RETAIL");
+    setBonusUse(0);
   }, [selectedCustomer]);
 
   const cards = useMemo<CatalogCard[]>(() => {
@@ -347,11 +404,11 @@ export default function Pos() {
     const step = options.quantity ?? 1;
     const key = packageId ? `${product.id}:${packageId}` : product.id;
     const need = step * (pkg?.factor ?? 1);
-    if (usedBase(product.id) + need > available(product) + 1e-9) {
+    if (usedBase(product.id) + need > avail(product) + 1e-9) {
       showToast({
         variant: "error",
         title: t("pos.insufficientStockTitle"),
-        message: t("pos.insufficientStockOnly", { name: product.name, qty: formatNumber(available(product)) }),
+        message: t("pos.insufficientStockOnly", { name: product.name, qty: formatNumber(avail(product)) }),
       });
       return;
     }
@@ -374,14 +431,14 @@ export default function Pos() {
       return;
     }
     const product = card.product;
-    if (available(product) > 0) {
+    if (avail(product) > 0) {
       addToCart(product);
       return;
     }
     // Out of stock here — offer interchangeable products instead.
     try {
       const analogs = await productService.getAnalogs(product.id, locationId);
-      const inStock = analogs.filter((a) => available(a) > 0);
+      const inStock = analogs.filter((a) => avail(a) > 0);
       if (inStock.length > 0) setAnalogsFor({ product, analogs: inStock });
       else showToast({ variant: "error", title: t("pos.insufficientStockTitle"), message: t("pos.noAnalogs", { name: product.name }) });
     } catch {
@@ -396,8 +453,8 @@ export default function Pos() {
           if (line.key !== key) return line;
           const next = Math.round((line.quantity + delta) * 1000) / 1000;
           const pkg = packageOf(line);
-          if (usedBase(line.product.id, key) + next * (pkg?.factor ?? 1) > available(line.product) + 1e-9) {
-            showToast({ variant: "error", title: t("pos.insufficientStockTitle"), message: t("pos.insufficientStockRemaining", { qty: formatNumber(available(line.product)) }) });
+          if (usedBase(line.product.id, key) + next * (pkg?.factor ?? 1) > avail(line.product) + 1e-9) {
+            showToast({ variant: "error", title: t("pos.insufficientStockTitle"), message: t("pos.insufficientStockRemaining", { qty: formatNumber(avail(line.product)) }) });
             return line;
           }
           return { ...line, quantity: next };
@@ -451,7 +508,14 @@ export default function Pos() {
   const maxDiscount = discountLimitPercent === null ? subtotal : Math.floor((subtotal * discountLimitPercent) / 100);
   // The cart can shrink after a discount was typed — never send more than allowed.
   const appliedDiscount = Math.min(discount, maxDiscount);
-  const total = Math.max(0, subtotal - appliedDiscount);
+  const payable = Math.max(0, subtotal - appliedDiscount);
+  // Loyalty points: never more than the customer has or the owner allows per receipt.
+  const bonusOn = !!business?.bonusEnabled && !!selectedCustomer;
+  const bonusMax = bonusOn
+    ? Math.max(0, Math.min(selectedCustomer?.bonusBalance ?? 0, Math.floor((payable * Number(business?.bonusMaxSpendPercent ?? 0)) / 100)))
+    : 0;
+  const appliedBonus = Math.min(bonusUse, bonusMax);
+  const total = Math.max(0, payable - appliedBonus);
   const change = paymentMethod === "CASH" && cashGiven !== "" ? Number(cashGiven) - total : null;
   const needsPrescription = !!business?.checkPrescription && cart.some((l) => l.product.prescriptionRequired);
   // Sellers get the wholesale price only for customers marked as wholesale.
@@ -501,10 +565,15 @@ export default function Pos() {
         locationId: locationId || undefined,
         priceLevel,
         prescriptionConfirmed: needsPrescription,
+        bonusUsed: appliedBonus,
+        reservationId: reservation?.id ?? null,
       });
       setLastSale(sale);
       setCart([]);
       setDiscount(0);
+      setBonusUse(0);
+      if (reservation) detachReservation();
+      if (sale.customer) customerService.listCustomers().then(setCustomers).catch(() => undefined);
       setCustomerId("");
       setPaymentMethod("CASH");
       setCashGiven("");
@@ -585,7 +654,7 @@ export default function Pos() {
           <div className="pos-product-grid">
             {cards.map((card) => {
               if (card.kind === "group") {
-                const stock = card.variants.reduce((s, v) => s + available(v), 0);
+                const stock = card.variants.reduce((s, v) => s + avail(v), 0);
                 const prices = card.variants.map((v) => v.salePrice);
                 const min = Math.min(...prices);
                 const max = Math.max(...prices);
@@ -602,7 +671,7 @@ export default function Pos() {
                 );
               }
               const p = card.product;
-              const stock = available(p);
+              const stock = avail(p);
               const chips = attributeChips(p, productFields);
               return (
                 <button key={p.id} className={`pos-product-card ${stock <= 0 ? "is-out" : ""}`} onClick={() => onCardClick(card)}>
@@ -658,7 +727,7 @@ export default function Pos() {
               const pkg = packageOf(line);
               const price = linePrice(line, priceLevel);
               const decimals = !pkg && DECIMAL_UNITS.has(line.product.unit);
-              const maxQty = (available(line.product) - usedBase(line.product.id, line.key)) / (pkg?.factor ?? 1);
+              const maxQty = (avail(line.product) - usedBase(line.product.id, line.key)) / (pkg?.factor ?? 1);
               return (
                 <div className="pos-cart-line" key={line.key}>
                   <div className="pos-cart-item">
@@ -725,6 +794,15 @@ export default function Pos() {
         </div>
 
         <div className="pos-summary">
+          {reservation && (
+            <div className="pos-banner">
+              <BookmarkCheck size={16} />
+              <span className="spacer">{t("pos.reservation", { number: reservation.number, name: reservation.customerName ?? "" })}</span>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={detachReservation} aria-label={t("common.close")}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
           <div className="row gap-2">
             <select className="select" style={{ flex: 1 }} value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
               <option value="">{paymentMethod === "DEBT" ? t("pos.summary.selectCustomer") : t("pos.summary.customerOptional")}</option>
@@ -769,6 +847,26 @@ export default function Pos() {
           {discountLimitPercent !== null && subtotal > 0 && (
             <div className="field-hint" style={{ textAlign: "right" }}>
               {t("pos.discountLimitHint", { percent: discountLimitPercent, amount: formatMoney(maxDiscount) })}
+            </div>
+          )}
+          {bonusOn && (
+            <div className="pos-summary-row" style={{ alignItems: "center" }}>
+              <span>{t("pos.bonus.label", { balance: formatMoney(selectedCustomer?.bonusBalance ?? 0) })}</span>
+              <div className="row gap-2">
+                <button className="btn btn-ghost btn-sm" disabled={bonusMax <= 0} onClick={() => setBonusUse(bonusMax)}>
+                  {t("pos.bonus.useMax")}
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  className="input"
+                  style={{ width: 100, height: 32, textAlign: "right" }}
+                  value={appliedBonus || ""}
+                  placeholder="0"
+                  disabled={bonusMax <= 0}
+                  onChange={(e) => setBonusUse(Math.max(0, Math.min(Math.floor(Number(e.target.value) || 0), bonusMax)))}
+                />
+              </div>
             </div>
           )}
           <div className="pos-summary-total">
@@ -831,7 +929,7 @@ export default function Pos() {
                 <button
                   key={v.id}
                   className="pos-variant-btn"
-                  disabled={available(v) <= 0}
+                  disabled={avail(v) <= 0}
                   onClick={() => {
                     addToCart(v);
                     setVariantGroup(null);
@@ -840,7 +938,7 @@ export default function Pos() {
                   <strong>{v.variantLabel ?? v.name}</strong>
                   <span className="mono-num">{formatMoney(v.salePrice)}</span>
                   <span className="text-muted" style={{ fontSize: "var(--font-size-xs)" }}>
-                    {available(v) > 0 ? `${formatNumber(available(v))} ${t("pos.left")}` : t("pos.out")}
+                    {avail(v) > 0 ? `${formatNumber(avail(v))} ${t("pos.left")}` : t("pos.out")}
                   </span>
                 </button>
               ))}
@@ -869,7 +967,7 @@ export default function Pos() {
                 >
                   <strong style={{ textAlign: "left" }}>{a.name}</strong>
                   <span className="mono-num">
-                    {formatMoney(a.salePrice)} · {formatNumber(available(a))} {t("pos.left")}
+                    {formatMoney(a.salePrice)} · {formatNumber(avail(a))} {t("pos.left")}
                   </span>
                 </button>
               ))}
@@ -904,10 +1002,20 @@ export default function Pos() {
             <div className="mono-num" style={{ fontSize: "var(--font-size-3xl)", fontWeight: 800 }}>
               {formatMoney(lastSale.total)}
             </div>
-            <div className="row gap-3">
+            {lastSale.bonusEarned > 0 && (
+              <div className="text-success" style={{ fontWeight: 600 }}>
+                {t("pos.bonus.earned", { amount: formatMoney(lastSale.bonusEarned) })}
+              </div>
+            )}
+            <div className="row gap-3" style={{ flexWrap: "wrap", justifyContent: "center" }}>
               <button className="btn btn-secondary" onClick={() => business && printSaleReceipt(lastSale, business)}>
                 <Printer size={16} /> {t("pos.printReceipt")}
               </button>
+              {business && (
+                <a className="btn btn-secondary" href={whatsappShareLink(lastSale.customer?.phone, receiptMessage(lastSale, business))} target="_blank" rel="noreferrer">
+                  <MessageCircle size={16} color="var(--color-success-text)" /> {t("pos.whatsappReceipt")}
+                </a>
+              )}
               <button className="btn btn-primary" autoFocus onClick={() => setLastSale(null)}>
                 {t("pos.nextSale")}
               </button>

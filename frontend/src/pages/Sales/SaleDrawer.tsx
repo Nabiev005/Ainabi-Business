@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Printer, ShieldCheck, Undo2 } from "lucide-react";
+import { MessageCircle, Printer, ShieldCheck, Undo2 } from "lucide-react";
 import { Drawer } from "../../components/ui/Drawer";
 import { Badge } from "../../components/ui/Badge";
 import { useAuth } from "../../hooks/useAuth";
@@ -7,6 +7,7 @@ import { sessionCan } from "../../hooks/usePermissions";
 import { useLabels } from "../../hooks/useLabels";
 import { formatDate, formatDateTime, formatMoney, formatNumber, unitLabel } from "../../utils/format";
 import { printSaleReceipt } from "../../utils/documents";
+import { receiptMessage, whatsappShareLink } from "../../utils/messages";
 import type { SaleDetail } from "../../types";
 
 interface SaleDrawerProps {
@@ -35,6 +36,11 @@ export function SaleDrawer({ sale, onClose, onReturn }: SaleDrawerProps) {
           <button className="btn btn-secondary" onClick={() => session && printSaleReceipt(sale, session.business)}>
             <Printer size={16} /> {t("sales.detail.print")}
           </button>
+          {session && (
+            <a className="btn btn-secondary" href={whatsappShareLink(sale.customer?.phone, receiptMessage(sale, session.business))} target="_blank" rel="noreferrer">
+              <MessageCircle size={16} color="var(--color-success-text)" /> WhatsApp
+            </a>
+          )}
           {canReturn && (
             <button className="btn btn-danger" onClick={() => onReturn(sale)}>
               <Undo2 size={16} /> {t("sales.detail.return")}
@@ -117,6 +123,12 @@ export function SaleDrawer({ sale, onClose, onReturn }: SaleDrawerProps) {
             <div className="row">
               <span className="spacer">{t("print.discount")}</span>
               <span className="mono-num">−{formatMoney(sale.discount)}</span>
+            </div>
+          )}
+          {sale.bonusUsed > 0 && (
+            <div className="row">
+              <span className="spacer">{t("waMessages.bonusUsed")}</span>
+              <span className="mono-num">−{formatMoney(sale.bonusUsed)}</span>
             </div>
           )}
           <div className="row" style={{ fontWeight: 700 }}>

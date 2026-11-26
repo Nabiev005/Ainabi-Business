@@ -9,6 +9,9 @@ export const updateBusinessSchema = z.object({
   currency: z.string().min(1).max(10).default("KGS"),
   qrPaymentInfo: z.string().max(LIMITS.comment).optional().nullable(),
   maxDiscountPercent: z.coerce.number().int().min(0, "Скидка 0дон 100гө чейин болушу керек").max(100, "Скидка 0дон 100гө чейин болушу керек").optional(),
+  bonusEnabled: z.boolean().optional(),
+  bonusPercent: z.coerce.number().min(0).max(50, "Бонус 0дон 50 пайызга чейин болушу керек").optional(),
+  bonusMaxSpendPercent: z.coerce.number().int().min(0).max(100).optional(),
 });
 
 export const businessTypeSchema = z.string().refine((v) => BUSINESS_TYPE_IDS.includes(v), "Бизнес түрү туура эмес");

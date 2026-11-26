@@ -47,6 +47,7 @@ const Catalog = lazy(() => import("./pages/Catalog/Catalog"));
 const Wholesale = lazy(() => import("./pages/Wholesale/Wholesale"));
 const Insights = lazy(() => import("./pages/Insights/Insights"));
 const Returns = lazy(() => import("./pages/Returns/Returns"));
+const Reservations = lazy(() => import("./pages/Reservations/Reservations"));
 const Stale = lazy(() => import("./pages/Stale/Stale"));
 const Billing = lazy(() => import("./pages/Billing/Billing"));
 const Platform = lazy(() => import("./pages/Platform/Platform"));
@@ -84,6 +85,7 @@ export default function App() {
                   <Route path="/tasks" element={<RequireFeature feature="tasks"><Tasks /></RequireFeature>} />
                   <Route path="/pipeline" element={<RequirePermission permission="pipeline.view"><RequireFeature feature="pipeline"><Pipeline /></RequireFeature></RequirePermission>} />
                   <Route path="/pos" element={<RequirePermission permission="pos.sell"><Pos /></RequirePermission>} />
+                  <Route path="/reservations" element={<RequirePermission permission="reservations.manage"><Reservations /></RequirePermission>} />
                   <Route path="/sales" element={<RequirePermission permission="sales.view"><Sales /></RequirePermission>} />
                   <Route path="/shifts" element={<RequirePermission permission={["shifts.use", "shifts.viewAll"]}><Shifts /></RequirePermission>} />
                   <Route path="/repairs" element={<RequirePermission permission="repairs.manage"><RequireFeature feature="repairs"><Repairs /></RequireFeature></RequirePermission>} />

@@ -5,6 +5,7 @@ import { toNumber, round2 } from "../utils/money";
 import { changeStock, consumeBatches, findOpenShift, getDefaultLocation, nextNumber, resolveLocationId } from "../utils/stockLedger";
 import { CreateReturnInput, CreateSaleInput, SaleQuery } from "../validators/sale.validator";
 import { hasPermission, Role } from "../config/permissions";
+import { consumeForSale, expireDue } from "./reservation.service";
 
 function addMonths(date: Date, months: number) {
   const result = new Date(date);
@@ -126,14 +127,32 @@ export async function createSale(
       throw ApiError.badRequest(`Скидка лимиттен ашты: эң көп ${business.maxDiscountPercent}% (${maxDiscount} сом).`);
     }
   }
-  const total = round2(Math.max(0, subtotal - discount));
+  const payable = round2(Math.max(0, subtotal - discount));
+
+  // Loyalty points: spend up to the owner's share of the receipt, earn a
+  // percent of what is actually paid (not on credit or wholesale prices).
+  const bonusUsed = round2(input.bonusUsed);
+  if (bonusUsed > 0) {
+    if (!business.bonusEnabled || !customer) throw ApiError.badRequest("Бонус менен төлөө үчүн кардарды тандаңыз.");
+    const maxSpend = Math.floor((payable * business.bonusMaxSpendPercent) / 100);
+    if (bonusUsed > maxSpend + 0.005) throw ApiError.badRequest(`Бонус менен эң көп ${maxSpend} сом төлөсө болот.`);
+  }
+  const total = round2(payable - bonusUsed);
+  const earnsBonus = business.bonusEnabled && !!customer && input.paymentMethod !== "DEBT" && input.priceLevel === "RETAIL";
+  const bonusEarned = earnsBonus ? Math.floor((total * toNumber(business.bonusPercent)) / 100) : 0;
 
   if (input.paymentMethod === "DEBT" && !input.customerId) {
     throw ApiError.badRequest("Карызга сатуу үчүн кардар талап кылынат.");
   }
 
+  // Reservations past their date give their goods back before we count stock.
+  await expireDue(businessId);
+
   const sale = await prisma.$transaction(
     async (tx) => {
+      // Selling a reservation: release what it held, then sell as usual.
+      if (input.reservationId) await consumeForSale(tx, businessId, input.reservationId);
+
       // Serials: a known unit must be in stock (and be this product); an
       // unknown one is registered as sold right away (shops that don't
       // enter IMEIs at receiving still get duplicate protection).
@@ -164,10 +183,27 @@ export async function createSale(
           locationId,
           shiftId: shift?.id ?? null,
           priceLevel: input.priceLevel,
+          bonusUsed,
+          bonusEarned,
           items: { create: lines.map((l) => l.data) },
         },
         include: { items: { include: { product: true } }, customer: true },
       });
+
+      if (input.reservationId) await tx.reservation.update({ where: { id: input.reservationId }, data: { saleId: sale.id } });
+
+      if (customer && bonusUsed > 0) {
+        const { count } = await tx.customer.updateMany({
+          where: { id: customer.id, bonusBalance: { gte: bonusUsed } },
+          data: { bonusBalance: { decrement: bonusUsed } },
+        });
+        if (count === 0) throw ApiError.badRequest("Кардардын бонусу жетишсиз.");
+        await tx.bonusTransaction.create({ data: { businessId, customerId: customer.id, saleId: sale.id, type: "SPEND", amount: -bonusUsed } });
+      }
+      if (customer && bonusEarned > 0) {
+        await tx.customer.update({ where: { id: customer.id }, data: { bonusBalance: { increment: bonusEarned } } });
+        await tx.bonusTransaction.create({ data: { businessId, customerId: customer.id, saleId: sale.id, type: "EARN", amount: bonusEarned } });
+      }
 
       for (const [serial, productId] of serialOwners) {
         const { count } = await tx.productSerial.updateMany({
@@ -312,10 +348,14 @@ export async function getSale(businessId: string, id: string) {
     discount: toNumber(sale.discount),
     total: toNumber(sale.total),
     returnedTotal: toNumber(sale.returnedTotal),
+    bonusUsed: toNumber(sale.bonusUsed),
+    bonusEarned: toNumber(sale.bonusEarned),
     paymentMethod: sale.paymentMethod,
     priceLevel: sale.priceLevel,
     status: sale.status,
-    customer: sale.customer ? { id: sale.customer.id, name: sale.customer.name, phone: sale.customer.phone } : null,
+    customer: sale.customer
+      ? { id: sale.customer.id, name: sale.customer.name, phone: sale.customer.phone, bonusBalance: toNumber(sale.customer.bonusBalance) }
+      : null,
     cashierName: sale.employee.user.name,
     locationName: location?.name ?? null,
     items: sale.items.map((i) => {
@@ -497,6 +537,8 @@ export async function createReturn(businessId: string, employeeId: string, saleI
       baseQuantity,
       serials,
       total: round2(toNumber(item.total) * itemShare * paidRatio),
+      // Share of the receipt's list price, for the loyalty points below.
+      gross: toNumber(item.total) * itemShare,
       costTotal: round2(toNumber(item.costPrice) * baseQuantity),
     };
   });
@@ -573,6 +615,17 @@ export async function createReturn(businessId: string, employeeId: string, saleI
       }
 
       await tx.sale.update({ where: { id: saleId }, data: { returnedTotal: { increment: total } } });
+
+      // Points follow the goods: spent ones come back, earned ones go.
+      const share = subtotal > 0 ? lines.reduce((s, l) => s + l.gross, 0) / subtotal : 0;
+      const bonusBack = round2(toNumber(sale.bonusUsed) * share);
+      const bonusTaken = round2(toNumber(sale.bonusEarned) * share);
+      if (sale.customerId && (bonusBack > 0 || bonusTaken > 0)) {
+        await tx.$executeRaw`UPDATE "customers" SET "bonusBalance" = GREATEST("bonusBalance" + ${bonusBack}::numeric - ${bonusTaken}::numeric, 0) WHERE "id" = ${sale.customerId}`;
+        await tx.bonusTransaction.create({
+          data: { businessId, customerId: sale.customerId, saleId, type: "RETURN", amount: round2(bonusBack - bonusTaken) },
+        });
+      }
 
       if (input.refundMethod === "DEBT" && sale.debt) {
         const debt = await tx.debt.update({

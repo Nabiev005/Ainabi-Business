@@ -1,14 +1,40 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AlarmClock, DollarSign, Handshake, Instagram, LucideIcon, ShieldAlert, Sparkles, Target, X } from "lucide-react";
+import {
+  AlarmClock,
+  BookmarkCheck,
+  DollarSign,
+  Gift,
+  Handshake,
+  Instagram,
+  LucideIcon,
+  MessageCircle,
+  ScanBarcode,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Truck,
+  X,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { sessionCan } from "../hooks/usePermissions";
 import type { Permission } from "../types";
 import "./WhatsNew.css";
 
+type FeatureCard = { key: string; icon: LucideIcon; path: string; permission: Permission };
+
 /** What shipped in the latest release — shown on the landing page and once on the dashboard. */
-export const NEW_FEATURES: { key: string; icon: LucideIcon; path: string; permission: Permission }[] = [
+export const NEW_FEATURES: FeatureCard[] = [
+  { key: "bonus", icon: Gift, path: "/settings", permission: "settings.business" },
+  { key: "whatsappReceipt", icon: MessageCircle, path: "/pos", permission: "pos.sell" },
+  { key: "reservations", icon: BookmarkCheck, path: "/reservations", permission: "reservations.manage" },
+  { key: "supplierOrder", icon: Truck, path: "/stock", permission: "stock.view" },
+  { key: "serials", icon: ScanBarcode, path: "/products", permission: "products.manage" },
+];
+
+/** The release before — still worth showing on the landing page, under all features. */
+export const EARLIER_FEATURES: FeatureCard[] = [
   { key: "debts", icon: AlarmClock, path: "/debts", permission: "debts.view" },
   { key: "usd", icon: DollarSign, path: "/settings", permission: "settings.products" },
   { key: "risk", icon: ShieldAlert, path: "/risk", permission: "analytics.view" },
@@ -19,7 +45,7 @@ export const NEW_FEATURES: { key: string; icon: LucideIcon; path: string; permis
 ];
 
 /** Bump when a new batch of features ships, so the dashboard card shows again. */
-const RELEASE = "2026-10";
+const RELEASE = "2026-11";
 const STORAGE_KEY = "ainabi.whatsNew.dismissed";
 
 function isDismissed() {

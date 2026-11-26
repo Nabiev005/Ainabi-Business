@@ -20,6 +20,10 @@ export const createSaleSchema = z
     priceLevel: z.enum(["RETAIL", "WHOLESALE"]).default("RETAIL"),
     // The cashier checked the prescription for prescription-only items.
     prescriptionConfirmed: z.boolean().default(false),
+    // Paid with the customer's loyalty points (som), on top of the discount.
+    bonusUsed: z.coerce.number().nonnegative().max(10_000_000).default(0),
+    // Selling a reservation: its held goods are released into this sale.
+    reservationId: z.string().optional().nullable(),
   })
   .refine((data) => data.paymentMethod !== "DEBT" || !!data.customerId, {
     message: "Карызга сатуу үчүн кардарды тандаңыз",

@@ -43,6 +43,8 @@ export const PERMISSIONS = {
   "shifts.viewAll": FINANCE,
 
   "repairs.manage": ["OWNER", "ADMIN", "CASHIER"],
+  // Hold goods for a customer, sell or cancel the hold.
+  "reservations.manage": ["OWNER", "ADMIN", "CASHIER"],
 
   "products.view": ALL,
   "products.manage": ["OWNER", "ADMIN", "REGISTRAR"],

@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
+  BookmarkCheck,
+  Gift,
   ChartPie,
   ClipboardCheck,
   Gem,
@@ -39,6 +41,7 @@ const GUIDE_KEYS = [
   { key: "products", icon: Package },
   { key: "pos", icon: ShoppingCart },
   { key: "sales", icon: ScrollText },
+  { key: "reservations", icon: BookmarkCheck },
   { key: "shifts", icon: Coins },
   { key: "stock", icon: Warehouse },
   { key: "receiving", icon: PackagePlus },
@@ -47,6 +50,7 @@ const GUIDE_KEYS = [
   { key: "repairs", icon: Wrench },
   { key: "branches", icon: MapPin },
   { key: "customers", icon: Users },
+  { key: "bonus", icon: Gift },
   { key: "debts", icon: Wallet },
   { key: "suppliers", icon: Truck },
   { key: "expenses", icon: Receipt },

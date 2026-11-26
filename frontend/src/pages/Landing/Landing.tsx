@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { NEW_FEATURES } from "../../components/WhatsNew";
+import { EARLIER_FEATURES, NEW_FEATURES } from "../../components/WhatsNew";
 import { BrandLogo } from "../../components/BrandLogo";
 import {
   ArrowLeftRight,
@@ -289,6 +289,15 @@ export default function Landing() {
           <p className="landing-section-subtitle">{t("landing.capabilities.subtitle")}</p>
         </div>
         <div className="landing-features landing-capabilities">
+          {EARLIER_FEATURES.map(({ key, icon: Icon }) => (
+            <div className="landing-feature-card" key={key}>
+              <div className="landing-feature-icon">
+                <Icon size={22} />
+              </div>
+              <h3>{t(`whatsNew.items.${key}.title`)}</h3>
+              <p>{t(`whatsNew.items.${key}.text`)}</p>
+            </div>
+          ))}
           {capabilities.map((c, i) => {
             const Icon = CAPABILITY_ICONS[i] ?? CheckCircle2;
             return (

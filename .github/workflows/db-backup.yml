@@ -1,0 +1,81 @@
+# Nightly encrypted database backup.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   BACKUP_DATABASE_URL  Neon *direct* connection string (no "-pooler")
+#   BACKUP_PASSPHRASE    long random secret; without it the backups can't be opened
+#
+# Each run dumps the database, restores the dump into a throwaway Postgres to
+# prove it works, encrypts it (AES-256) and keeps it as a workflow artifact for
+# 30 days. The repository is public, so only the encrypted file is uploaded
+# and the logs print counts, never data. A failed run emails the repo owner.
+name: Database backup
+
+on:
+  schedule:
+    - cron: "0 21 * * *" # 03:00 in Bishkek
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # Forks have no secrets and must never try.
+    if: github.repository == 'Nabiev005/Ainabi-Business'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      verify:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: verify
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then
+            echo "::error::Add the BACKUP_DATABASE_URL and BACKUP_PASSPHRASE repository secrets."
+            exit 1
+          fi
+
+      - name: Install PostgreSQL 18 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - name: Dump, verify and encrypt
+        id: backup
+        working-directory: backend
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          VERIFY_DATABASE_URL: postgresql://postgres:verify@127.0.0.1:5432/postgres
+          OUT_DIR: ${{ runner.temp }}/backups
+        run: bash scripts/backup-verified.sh
+
+      - name: Keep for 30 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: ainabi-db-${{ github.run_number }}
+          path: ${{ steps.backup.outputs.file }}
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
