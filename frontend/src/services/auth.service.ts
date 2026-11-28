@@ -60,6 +60,15 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await api.post("/auth/forgot-password", { email });
 }
 
+export async function verifyEmail(token: string): Promise<void> {
+  await api.post("/auth/verify-email", { token });
+}
+
+export async function resendVerification(): Promise<{ alreadyVerified: boolean }> {
+  const { data } = await api.post<{ alreadyVerified: boolean }>("/auth/resend-verification");
+  return data;
+}
+
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
   await api.post("/auth/reset-password", { token, newPassword });
 }

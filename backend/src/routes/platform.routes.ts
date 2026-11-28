@@ -37,6 +37,13 @@ router.get(
 );
 
 router.get(
+  "/overview",
+  asyncHandler(async (_req, res) => {
+    res.json(await billingService.platformOverview());
+  }),
+);
+
+router.get(
   "/payments",
   asyncHandler(async (_req, res) => {
     res.json(await billingService.listAllPayments());

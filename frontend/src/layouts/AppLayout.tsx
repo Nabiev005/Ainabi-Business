@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileTabBar } from "./MobileTabBar";
 import { SubscriptionBanner } from "../components/SubscriptionBanner";
+import { EmailVerifyBanner } from "../components/EmailVerifyBanner";
 import "./layout.css";
 
 export function AppLayout() {
@@ -21,6 +22,7 @@ export function AppLayout() {
       />
       <div className="app-main">
         <Header onOpenMobileSidebar={() => setMobileOpen(true)} />
+        <EmailVerifyBanner />
         <SubscriptionBanner />
         <main className="page">
           <div key={location.pathname} className="route-transition">

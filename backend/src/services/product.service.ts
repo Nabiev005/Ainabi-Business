@@ -263,6 +263,8 @@ export async function listProducts(businessId: string, query: ProductQuery) {
             { barcode: { contains: query.search, mode: "insensitive" } },
             { attributesText: { contains: query.search, mode: "insensitive" } },
             { packages: { some: { barcode: query.search } } },
+            // A unit's IMEI / serial number finds its product.
+            { serials: { some: { serial: query.search.trim().toUpperCase(), status: "IN_STOCK" } } },
           ],
         }
       : {}),
@@ -335,7 +337,7 @@ export async function findByBarcode(businessId: string, code: string, locationId
   if (pkg) {
     return {
       ...serializeProduct(pkg.product),
-      scan: { packageId: pkg.id, packageName: pkg.name, factor: toNumber(pkg.factor), quantity: null as number | null },
+      scan: { packageId: pkg.id, packageName: pkg.name, factor: toNumber(pkg.factor), quantity: null as number | null, serial: null as string | null },
     };
   }
 
@@ -347,9 +349,22 @@ export async function findByBarcode(businessId: string, code: string, locationId
       const weighed = await prisma.product.findFirst({ where: { businessId, scaleCode: plu, status: "ACTIVE" }, include });
       if (weighed && grams > 0) {
         const quantity = weighed.unit === "GRAM" ? grams : Math.round(grams) / 1000;
-        return { ...serializeProduct(weighed), scan: { packageId: null, packageName: null, factor: 1, quantity } };
+        return { ...serializeProduct(weighed), scan: { packageId: null, packageName: null, factor: 1, quantity, serial: null as string | null } };
       }
     }
+  }
+
+  // An IMEI / serial number of a unit in stock: its product, with the number
+  // ready to go into the sale.
+  const unit = await prisma.productSerial.findFirst({
+    where: { businessId, serial: code.trim().toUpperCase(), status: "IN_STOCK", product: { status: "ACTIVE" } },
+    include: { product: { include } },
+  });
+  if (unit) {
+    return {
+      ...serializeProduct(unit.product),
+      scan: { packageId: null, packageName: null, factor: 1, quantity: null as number | null, serial: unit.serial as string | null },
+    };
   }
 
   throw ApiError.notFound("Товар табылган жок.");

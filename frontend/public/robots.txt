@@ -3,3 +3,4 @@ Allow: /api/public/
 Disallow: /api/
 
 Sitemap: https://business.ainabi.site/sitemap.xml
+Sitemap: https://business.ainabi.site/api/public/sitemap.xml

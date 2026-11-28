@@ -12,6 +12,31 @@ import "./Catalog.css";
 
 type Item = PublicCatalog["items"][number];
 
+/** What Google shows for this shop window: a description and the shop's details. */
+function describeForSearch(d: PublicCatalog) {
+  const text = [d.shop.note, d.shop.address, `${d.total} товар`].filter(Boolean).join(" · ");
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "description";
+    document.head.appendChild(meta);
+  }
+  meta.content = `${d.shop.name} — ${text}`.slice(0, 300);
+  document.getElementById("catalog-ld")?.remove();
+  const ld = document.createElement("script");
+  ld.id = "catalog-ld";
+  ld.type = "application/ld+json";
+  ld.textContent = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: d.shop.name,
+    url: location.href.split("?")[0],
+    ...(d.shop.address ? { address: d.shop.address } : {}),
+    ...(d.shop.phone ? { telephone: d.shop.phone } : {}),
+  });
+  document.head.appendChild(ld);
+}
+
 /** The shop window a customer opens from Instagram: browse, fill a bag, send the order on WhatsApp. */
 export default function Catalog() {
   const { slug = "" } = useParams();
@@ -39,6 +64,7 @@ export default function Catalog() {
         setData(d);
         setItems((prev) => (page === 1 ? d.items : [...prev, ...d.items]));
         document.title = d.shop.name;
+        describeForSearch(d);
       })
       .catch(() => !cancelled && setNotFound(true));
     return () => {

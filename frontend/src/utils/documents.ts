@@ -72,6 +72,36 @@ export function printSaleReceipt(sale: SaleDetail, business: Business) {
   printHtml(body, RECEIPT_CSS, t("print.receiptTitle", { number: sale.number ?? "" }));
 }
 
+/** A sale with goods under warranty or with serial numbers gets a warranty card. */
+export function hasWarranty(sale: SaleDetail) {
+  return sale.items.some((i) => !!i.warrantyUntil || i.serialNumbers.length > 0);
+}
+
+/** The customer's warranty card: what was bought, its IMEI / serial numbers and until when it is covered. */
+export function printWarrantyCard(sale: SaleDetail, business: Business) {
+  const rows = sale.items
+    .filter((i) => i.warrantyUntil || i.serialNumbers.length > 0)
+    .map(
+      (i) => `
+        <tr><td colspan="2" class="line-name">${e(i.productName)}</td></tr>
+        ${i.serialNumbers.length ? `<tr><td>IMEI / S/N</td><td class="num">${i.serialNumbers.map(e).join("<br/>")}</td></tr>` : ""}
+        <tr><td>${e(t("print.warrantyCardUntil"))}</td><td class="num"><b>${i.warrantyUntil ? e(formatDate(i.warrantyUntil)) : "—"}</b></td></tr>`,
+    )
+    .join("");
+  const body = `
+    ${header(business)}
+    <div class="center"><b>${e(t("print.warrantyCardTitle"))}</b></div>
+    <div class="center muted">${e(t("print.receiptTitle", { number: sale.number ?? "—" }))} · ${e(formatDateTime(sale.createdAt))}</div>
+    ${sale.customer ? `<div class="muted">${e(t("print.customer"))}: ${e(sale.customer.name)}${sale.customer.phone ? ` · ${e(sale.customer.phone)}` : ""}</div>` : ""}
+    <hr/>
+    <table>${rows}</table>
+    <hr/>
+    <div class="small">${e(t("print.warrantyCardTerms"))}</div>
+    <div style="margin-top:14px" class="muted">${e(t("print.warrantyCardSeller"))}: ____________________</div>
+    <div style="margin-top:10px" class="muted">${e(t("print.warrantyCardBuyer"))}: ____________________</div>`;
+  printHtml(body, RECEIPT_CSS, t("print.warrantyCardTitle"));
+}
+
 /** Two copies on one roll: the customer's ticket and the workshop's tag. */
 export function printRepairTicket(repair: RepairOrder, business: Business) {
   const block = (copyLabel: string) => `

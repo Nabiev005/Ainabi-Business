@@ -50,7 +50,7 @@ const authBruteForceLimiter = rateLimit({
   }),
 });
 app.use(
-  ["/api/auth/login", "/api/auth/register", "/api/auth/google", "/api/auth/change-password", "/api/auth/forgot-password", "/api/auth/reset-password"],
+  ["/api/auth/login", "/api/auth/register", "/api/auth/google", "/api/auth/change-password", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/verify-email", "/api/auth/resend-verification"],
   authBruteForceLimiter,
 );
 

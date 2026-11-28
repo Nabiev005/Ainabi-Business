@@ -6,6 +6,8 @@ import { env } from "../config/env";
 import { changePasswordSchema, forgotPasswordSchema, googleAuthSchema, loginSchema, registerSchema, resetPasswordSchema } from "../validators/auth.validator";
 import { isEmailEnabled } from "../utils/mailer";
 import * as authService from "../services/auth.service";
+import * as emailVerification from "../services/emailVerification.service";
+import { z } from "zod";
 
 export const registerHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = registerSchema.parse(req.body);
@@ -69,6 +71,16 @@ export const forgotPasswordHandler = asyncHandler(async (req: Request, res: Resp
   await authService.requestPasswordReset(input, req.lang);
   // Same answer whether or not the address has an account.
   res.json({ ok: true });
+});
+
+export const verifyEmailHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { token } = z.object({ token: z.string().min(10).max(200) }).parse(req.body);
+  await emailVerification.verifyEmail(token);
+  res.json({ ok: true });
+});
+
+export const resendVerificationHandler = asyncHandler(async (req: Request, res: Response) => {
+  res.json(await emailVerification.resendVerification(req.auth!.userId, req.lang));
 });
 
 export const resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {

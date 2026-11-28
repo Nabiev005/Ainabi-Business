@@ -12,6 +12,10 @@ import * as billingService from "../../services/billing.service";
 import type { PlanDefinition, PlanId, PlatformBusiness, PlatformPayments } from "../../services/billing.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatDateTime, formatMoney } from "../../utils/format";
+import { PlatformOverview } from "./PlatformOverview";
+import "./Platform.css";
+
+const HEALTH_BADGE = { NEW: "info", ACTIVE: "success", SLOWING: "warning", INACTIVE: "danger" } as const;
 
 /**
  * The platform owner's panel: every business on the platform, its
@@ -142,26 +146,7 @@ export default function Platform() {
         </div>
       </div>
 
-      <div className="kpi-grid">
-        <div className="card card-pad stack gap-1">
-          <span className="text-muted" style={{ fontSize: "var(--font-size-sm)" }}>{t("platform.thisMonth")}</span>
-          <strong className="mono-num" style={{ fontSize: "var(--font-size-2xl, 24px)" }}>{payments ? formatMoney(payments.thisMonth.amount) : "—"}</strong>
-          <span className="text-muted" style={{ fontSize: "var(--font-size-xs)" }}>{payments ? t("platform.paymentsCount", { count: payments.thisMonth.count }) : ""}</span>
-        </div>
-        <div className="card card-pad stack gap-1">
-          <span className="text-muted" style={{ fontSize: "var(--font-size-sm)" }}>{t("platform.allTime")}</span>
-          <strong className="mono-num" style={{ fontSize: "var(--font-size-2xl, 24px)" }}>{payments ? formatMoney(payments.allTime) : "—"}</strong>
-        </div>
-        <div className="card card-pad stack gap-1">
-          <span className="text-muted" style={{ fontSize: "var(--font-size-sm)" }}>{t("platform.activePaid")}</span>
-          <strong className="mono-num" style={{ fontSize: "var(--font-size-2xl, 24px)" }}>
-            {rows ? rows.filter((b) => b.subscription.active && !b.subscription.isTrial).length : "—"}
-          </strong>
-          <span className="text-muted" style={{ fontSize: "var(--font-size-xs)" }}>
-            {rows ? t("platform.trialsCount", { count: rows.filter((b) => b.subscription.active && b.subscription.isTrial).length }) : ""}
-          </span>
-        </div>
-      </div>
+      <PlatformOverview />
 
       <div className="tabs" style={{ alignSelf: "flex-start" }}>
         <button className={`tab ${tab === "businesses" ? "active" : ""}`} onClick={() => setTab("businesses")}>
@@ -283,6 +268,9 @@ export default function Platform() {
                       )}
                     </td>
                     <td className="table-cell-num text-muted" style={{ fontSize: "var(--font-size-xs)" }}>
+                      <Badge variant={HEALTH_BADGE[b.health]}>{t(`platform.health.${b.health}`)}</Badge>{" "}
+                      {t("platform.sales30d", { count: b.sales30d })}
+                      <br />
                       {t("platform.activityValue", { sales: b.sales, products: b.products, employees: b.employees })}
                       <br />
                       {b.lastSaleAt ? formatDateTime(b.lastSaleAt) : "—"}

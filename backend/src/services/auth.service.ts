@@ -10,7 +10,8 @@ import { escapeHtml, isEmailEnabled, sendEmail } from "../utils/mailer";
 import { applyTemplate } from "./settings.service";
 import type { Lang } from "../i18n/messages";
 import { permissionsFor, Role } from "../config/permissions";
-import { PlanId, subscriptionInfo, TRIAL_PLAN, trialEndsAt } from "../config/plans";
+import { PlanId, subscriptionInfo, TRIAL_PLAN, trialEndsAt, UNVERIFIED_TRIAL_DAYS } from "../config/plans";
+import { sendVerificationEmail, verificationRequired } from "./emailVerification.service";
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
 /** Wrong passwords in a row before the account is locked for a while. */
@@ -82,6 +83,7 @@ function toSessionUser(user: {
   passwordHash?: string | null;
   googleId?: string | null;
   mustChangePassword?: boolean;
+  emailVerifiedAt?: Date | null;
 }) {
   return {
     id: user.id,
@@ -92,6 +94,7 @@ function toSessionUser(user: {
     provider: user.provider,
     hasPassword: !!user.passwordHash,
     mustChangePassword: !!user.mustChangePassword,
+    emailVerified: !!user.emailVerifiedAt,
     isPlatformAdmin: isPlatformAdminUser({ email: user.email, googleId: user.googleId ?? null }),
   };
 }
@@ -108,6 +111,8 @@ export async function register(input: RegisterInput, lang: Lang = "ky") {
   }
 
   const passwordHash = await hashPassword(input.password);
+  // Unconfirmed sign-ups get a short trial; the emailed link extends it.
+  const mustVerify = verificationRequired();
 
   const { user, employee, business } = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -117,11 +122,19 @@ export async function register(input: RegisterInput, lang: Lang = "ky") {
         phone: input.phone,
         passwordHash,
         provider: "PASSWORD",
+        emailVerifiedAt: mustVerify ? null : new Date(),
       },
     });
 
     const created = await tx.business.create({
-      data: { name: input.businessName, ownerId: user.id, phone: input.phone, plan: TRIAL_PLAN, isTrial: true, planExpiresAt: trialEndsAt() },
+      data: {
+        name: input.businessName,
+        ownerId: user.id,
+        phone: input.phone,
+        plan: TRIAL_PLAN,
+        isTrial: true,
+        planExpiresAt: trialEndsAt(new Date(), mustVerify ? UNVERIFIED_TRIAL_DAYS : undefined),
+      },
     });
 
     const employee = await tx.employee.create({
@@ -139,6 +152,11 @@ export async function register(input: RegisterInput, lang: Lang = "ky") {
 
     return { user, employee, business };
   });
+
+  if (mustVerify) {
+    // A failed email mustn't fail the sign-up: the owner can ask again from the app.
+    await sendVerificationEmail(user, lang).catch((error) => console.error("Verification email failed:", error));
+  }
 
   const tokens = await issueTokens(user.id, business.id, employee.id, employee.role);
   return {
@@ -246,6 +264,8 @@ export async function loginWithGoogle(input: GoogleAuthInput, lang: Lang = "ky")
             avatarUrl: payload.picture ?? existingByEmail.avatarUrl,
             passwordHash: null,
             mustChangePassword: false,
+            // Google proved the address.
+            emailVerifiedAt: existingByEmail.emailVerifiedAt ?? new Date(),
             failedLogins: 0,
             lockedUntil: null,
           },
@@ -271,6 +291,7 @@ export async function loginWithGoogle(input: GoogleAuthInput, lang: Lang = "ky")
             googleId: payload!.sub,
             avatarUrl: payload!.picture ?? null,
             provider: "GOOGLE",
+            emailVerifiedAt: new Date(),
           },
         }));
 

@@ -46,6 +46,17 @@ export async function updateCatalogSettings(businessId: string, input: CatalogSe
   return getCatalogSettings(businessId);
 }
 
+/** Shop windows that are switched on and have something for sale — for the sitemap. */
+export async function listedCatalogs() {
+  const rows = await prisma.business.findMany({
+    where: { catalogEnabled: true, catalogSlug: { not: null }, products: { some: { status: "ACTIVE", quantity: { gt: 0 } } } },
+    select: { catalogSlug: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+    take: 5000,
+  });
+  return rows.map((r) => ({ slug: r.catalogSlug!, updatedAt: r.updatedAt }));
+}
+
 export async function publicCatalog(slug: string, query: { search?: string; categoryId?: string; page: number }) {
   const shop = await prisma.business.findFirst({
     where: { catalogSlug: slug.toLowerCase(), catalogEnabled: true },

@@ -16,6 +16,8 @@ interface AuthContextValue {
    * update, so other pages (POS's QR payment screen) see it without
    * waiting for the next token refresh. */
   updateSessionBusiness: (business: Business) => void;
+  /** Re-reads the session from the server. */
+  reloadSession: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -88,9 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession((prev) => (prev ? { ...prev, business } : prev));
   }, []);
 
+  /** Re-reads the session (e.g. after the email was confirmed). No-op when signed out. */
+  const reloadSession = useCallback(async () => {
+    if (!tokenStore.getAccessToken()) return;
+    setSession(await authService.fetchSession());
+  }, []);
+
   const value = useMemo(
-    () => ({ session, isLoading, login, loginWithGoogle, register, logout, changePassword, updateSessionBusiness }),
-    [session, isLoading, login, loginWithGoogle, register, logout, changePassword, updateSessionBusiness],
+    () => ({ session, isLoading, login, loginWithGoogle, register, logout, changePassword, updateSessionBusiness, reloadSession }),
+    [session, isLoading, login, loginWithGoogle, register, logout, changePassword, updateSessionBusiness, reloadSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
