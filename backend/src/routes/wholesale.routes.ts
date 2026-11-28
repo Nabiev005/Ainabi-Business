@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
 import { requirePermission } from "../middleware/requireRole";
+import { requireFeature } from "../middleware/subscription";
 import { asyncHandler } from "../utils/asyncHandler";
 import { createWholesaleOrderSchema, wholesaleSettingsSchema, wholesaleStatusSchema } from "../validators/wholesale.validator";
 import * as wholesale from "../services/wholesale.service";
@@ -10,7 +11,8 @@ import * as wholesale from "../services/wholesale.service";
 const router = Router();
 router.use(requireAuth, businessRateLimit);
 
-const buy = requirePermission("wholesale.buy");
+// Buying from other shops is Pro and up; selling to them (incoming orders) stays open to every plan.
+const buy = [requireFeature("wholesale"), requirePermission("wholesale.buy")];
 const listQuery = z.object({ search: z.string().max(100).optional(), page: z.coerce.number().int().positive().max(500).default(1) });
 
 router.get(

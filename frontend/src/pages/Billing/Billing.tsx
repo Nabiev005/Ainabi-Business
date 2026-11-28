@@ -5,12 +5,11 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { Badge } from "../../components/ui/Badge";
 import { useToast } from "../../hooks/useToast";
 import * as billingService from "../../services/billing.service";
-import type { BillingData, Feature, PlanId } from "../../services/billing.service";
+import { ALL_FEATURES, type BillingData, type PlanId } from "../../services/billing.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatMoney } from "../../utils/format";
 import "./Billing.css";
 
-const ALL_FEATURES: Feature[] = ["receiving", "inventory", "repairs", "tasks", "pipeline", "analytics"];
 
 export default function Billing() {
   const { t } = useTranslation();

@@ -18,7 +18,7 @@ const chatSchema = z.object({
     .refine((m) => m[0].role === "user" && m[m.length - 1].role === "user", "Суроо туура эмес"),
 });
 
-router.use(requireAuth, businessRateLimit, requireFeature("analytics"), requirePermission("assistant.use"));
+router.use(requireAuth, businessRateLimit, requireFeature("ai"), requirePermission("assistant.use"));
 
 router.get(
   "/",

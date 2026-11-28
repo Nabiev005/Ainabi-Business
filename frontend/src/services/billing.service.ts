@@ -1,7 +1,40 @@
 import { api } from "./api";
 
 export type PlanId = "BASIC" | "PRO" | "MAX";
-export type Feature = "tasks" | "pipeline" | "analytics" | "repairs" | "receiving" | "inventory";
+export type Feature =
+  | "tasks"
+  | "pipeline"
+  | "analytics"
+  | "repairs"
+  | "receiving"
+  | "inventory"
+  | "loyalty"
+  | "reservations"
+  | "wholesale"
+  | "ai"
+  | "risk"
+  | "telegram"
+  | "crm";
+
+/** In the order the plan cards list them (backend config/plans.ts decides who gets what). */
+export const ALL_FEATURES: Feature[] = [
+  "receiving",
+  "inventory",
+  "repairs",
+  "tasks",
+  "pipeline",
+  "analytics",
+  "loyalty",
+  "reservations",
+  "wholesale",
+  "ai",
+  "risk",
+  "telegram",
+  "crm",
+];
+const MAX_ONLY: Feature[] = ["ai", "risk", "telegram", "crm"];
+/** The cheapest plan that has the module. */
+export const planFor = (feature: Feature): PlanId => (MAX_ONLY.includes(feature) ? "MAX" : "PRO");
 
 export interface SubscriptionInfo {
   plan: PlanId;

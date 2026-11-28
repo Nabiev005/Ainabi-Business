@@ -55,10 +55,16 @@ import { GuideAccordion } from "../../components/GuideAccordion";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 import { useGuideSections } from "../../data/guideSections";
 import * as billingService from "../../services/billing.service";
-import type { Feature as PlanFeature, PlanDefinition } from "../../services/billing.service";
+import { ALL_FEATURES as PLAN_FEATURES, type PlanDefinition } from "../../services/billing.service";
 import { formatMoney } from "../../utils/format";
 import { isNativeApp } from "../../utils/native";
+import "@fontsource/unbounded/600.css";
+import "@fontsource/onest/400.css";
+import "@fontsource/onest/500.css";
+import "@fontsource/onest/600.css";
+import { HeroScene } from "./HeroScene";
 import "./Landing.css";
+import "./HeroScene.css";
 
 interface Problem { before: string; after: string }
 interface Feature { title: string; text: string }
@@ -105,7 +111,6 @@ const CAPABILITY_ICONS: LucideIcon[] = [
 ];
 
 /** Paid modules in the order the price cards list them. */
-const PLAN_FEATURES: PlanFeature[] = ["receiving", "inventory", "repairs", "tasks", "pipeline", "analytics"];
 
 export default function Landing() {
   const { t } = useTranslation();
@@ -165,10 +170,8 @@ export default function Landing() {
       </nav>
 
       <section className="landing-hero">
-        <div>
-          <span className="landing-eyebrow">
-            <Zap size={13} /> {t("landing.hero.eyebrow")}
-          </span>
+        <div className="landing-hero-copy">
+          <p className="landing-hero-kicker">{t("landing.hero.eyebrow")}</p>
           <h1>{t("landing.hero.title")}</h1>
           <p className="landing-hero-subtitle">{t("landing.hero.subtitle")}</p>
           <div className="landing-hero-actions">
@@ -191,9 +194,7 @@ export default function Landing() {
             </span>
           </div>
         </div>
-        <div className="landing-hero-image">
-          <img src="/app-preview.png" alt="Ainabi Business" />
-        </div>
+        <HeroScene />
       </section>
 
       <section className="landing-section" id="new">
@@ -321,7 +322,8 @@ export default function Landing() {
           </div>
           <div className="landing-pricing">
             {plans.map((p) => (
-              <div key={p.id} className={`landing-plan ${p.id === "PRO" ? "landing-plan-featured" : ""}`}>
+              <div key={p.id} className={`landing-plan-wrap ${p.id === "PRO" ? "landing-plan-wrap-featured" : ""}`}>
+              <div className={`landing-plan ${p.id === "PRO" ? "landing-plan-featured" : ""}`}>
                 {p.id === "PRO" && <span className="landing-plan-badge">{t("landing.pricing.popular")}</span>}
                 <h3>{t(`billing.plans.${p.id}.name`)}</h3>
                 <p className="landing-plan-for">{t(`billing.plans.${p.id}.for`)}</p>
@@ -356,6 +358,7 @@ export default function Landing() {
                 <button className={`btn ${p.id === "PRO" ? "btn-primary" : "btn-secondary"}`} onClick={() => navigate("/register")}>
                   {p.id === "MAX" ? t("landing.pricing.ctaPaid") : t("landing.pricing.cta", { days: trialDays })}
                 </button>
+              </div>
               </div>
             ))}
           </div>

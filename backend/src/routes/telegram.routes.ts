@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { timingSafeEqual } from "crypto";
 import { requireAuth } from "../middleware/auth";
+import { requireFeature } from "../middleware/subscription";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
 import { env } from "../config/env";
@@ -46,6 +47,7 @@ router.get(
 router.post(
   "/link",
   requireAuth,
+  requireFeature("telegram"),
   asyncHandler(async (req, res) => {
     if (!telegramEnabled()) throw new ApiError(503, "Telegram бул серверде жандырылган эмес.");
     await ensureWebhook();

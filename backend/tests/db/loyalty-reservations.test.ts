@@ -50,6 +50,18 @@ test("bonus: earned on what is paid, spent up to the cap, nothing when switched 
   await assert.rejects(sell(off, [{ productId: p2.id, quantity: 1 }], { customerId: c2.id, bonusUsed: 1 }), /кардарды тандаңыз/);
 });
 
+test("bonus: a Basic shop earns nothing even if switched on; an old Basic shop keeps it until its grace ends", async () => {
+  const basic = await newShop({ plan: "BASIC", bonusEnabled: true, bonusPercent: 5 });
+  const c = await newCustomer(basic);
+  const p = await newProduct(basic, { quantity: 5, salePrice: 1000 });
+  assert.equal((await sell(basic, [{ productId: p.id, quantity: 1 }], { customerId: c.id })).bonusEarned, 0);
+
+  const old = await newShop({ plan: "BASIC", bonusEnabled: true, bonusPercent: 5, legacyFeaturesUntil: new Date(Date.now() + 86_400_000) });
+  const c2 = await newCustomer(old);
+  const p2 = await newProduct(old, { quantity: 5, salePrice: 1000 });
+  assert.equal((await sell(old, [{ productId: p2.id, quantity: 1 }], { customerId: c2.id })).bonusEarned, 50);
+});
+
 test("bonus: two tills can't spend the same points", async () => {
   const shop = await newShop({ bonusEnabled: true, bonusPercent: 0 });
   const customer = await newCustomer(shop, { bonusBalance: 100 });

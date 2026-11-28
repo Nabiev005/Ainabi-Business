@@ -17,7 +17,7 @@ router.use(requireAuth, businessRateLimit);
 // hint (cash tied up) is only included for roles allowed to see slow stock.
 router.get(
   "/monthly",
-  requireFeature("analytics"),
+  requireFeature("ai"),
   requirePermission("analytics.view"),
   asyncHandler(async (req, res) => {
     const { month } = z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).optional() }).parse(req.query);
@@ -28,7 +28,7 @@ router.get(
 // Till watch: who to look at and why (discounts, below-cost sales, cash shortages...).
 router.get(
   "/risk",
-  requireFeature("analytics"),
+  requireFeature("risk"),
   requirePermission("analytics.view"),
   asyncHandler(async (req, res) => {
     res.json(await riskService.buildRiskReport(req.auth!.businessId, reportQuerySchema.parse(req.query)));
@@ -54,6 +54,7 @@ router.get(
 // Slow stock — owner and seller. The seller gets what to push, never the cost.
 router.get(
   "/stale",
+  requireFeature("risk"),
   requirePermission("stock.stale"),
   asyncHandler(async (req, res) => {
     const { days } = z.object({ days: z.coerce.number().int().min(14).max(365).default(60) }).parse(req.query);

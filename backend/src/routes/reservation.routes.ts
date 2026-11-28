@@ -2,12 +2,13 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { businessRateLimit } from "../middleware/businessRateLimit";
 import { requirePermission } from "../middleware/requireRole";
+import { requireFeature } from "../middleware/subscription";
 import { asyncHandler } from "../utils/asyncHandler";
 import { createReservationSchema, reservationQuerySchema } from "../validators/reservation.validator";
 import * as reservations from "../services/reservation.service";
 
 const router = Router();
-router.use(requireAuth, businessRateLimit, requirePermission("reservations.manage"));
+router.use(requireAuth, businessRateLimit, requireFeature("reservations"), requirePermission("reservations.manage"));
 
 router.get(
   "/",

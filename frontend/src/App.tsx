@@ -49,6 +49,7 @@ const Wholesale = lazy(() => import("./pages/Wholesale/Wholesale"));
 const Insights = lazy(() => import("./pages/Insights/Insights"));
 const Returns = lazy(() => import("./pages/Returns/Returns"));
 const Reservations = lazy(() => import("./pages/Reservations/Reservations"));
+const Crm = lazy(() => import("./pages/Crm/Crm"));
 const Stale = lazy(() => import("./pages/Stale/Stale"));
 const Billing = lazy(() => import("./pages/Billing/Billing"));
 const Platform = lazy(() => import("./pages/Platform/Platform"));
@@ -87,7 +88,7 @@ export default function App() {
                   <Route path="/tasks" element={<RequireFeature feature="tasks"><Tasks /></RequireFeature>} />
                   <Route path="/pipeline" element={<RequirePermission permission="pipeline.view"><RequireFeature feature="pipeline"><Pipeline /></RequireFeature></RequirePermission>} />
                   <Route path="/pos" element={<RequirePermission permission="pos.sell"><Pos /></RequirePermission>} />
-                  <Route path="/reservations" element={<RequirePermission permission="reservations.manage"><Reservations /></RequirePermission>} />
+                  <Route path="/reservations" element={<RequirePermission permission="reservations.manage"><RequireFeature feature="reservations"><Reservations /></RequireFeature></RequirePermission>} />
                   <Route path="/sales" element={<RequirePermission permission="sales.view"><Sales /></RequirePermission>} />
                   <Route path="/shifts" element={<RequirePermission permission={["shifts.use", "shifts.viewAll"]}><Shifts /></RequirePermission>} />
                   <Route path="/repairs" element={<RequirePermission permission="repairs.manage"><RequireFeature feature="repairs"><Repairs /></RequireFeature></RequirePermission>} />
@@ -98,6 +99,7 @@ export default function App() {
                   <Route path="/stock" element={<RequirePermission permission="stock.view"><Stock /></RequirePermission>} />
                   <Route path="/customers" element={<RequirePermission permission="customers.view"><Customers /></RequirePermission>} />
                   <Route path="/customers/:id" element={<RequirePermission permission="customers.view"><CustomerProfile /></RequirePermission>} />
+                  <Route path="/crm" element={<RequirePermission permission="customers.view"><RequireFeature feature="crm"><Crm /></RequireFeature></RequirePermission>} />
                   <Route path="/debts" element={<RequirePermission permission="debts.view"><Debts /></RequirePermission>} />
                   <Route path="/suppliers" element={<RequirePermission permission="suppliers.view"><Suppliers /></RequirePermission>} />
                   <Route path="/suppliers/:id" element={<RequirePermission permission="suppliers.view"><SupplierProfile /></RequirePermission>} />
@@ -105,12 +107,12 @@ export default function App() {
                   <Route path="/reports" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
                   <Route path="/employees" element={<RequirePermission permission="employees.manage"><Employees /></RequirePermission>} />
                   <Route path="/settings" element={<Settings />} />
-                  <Route path="/insights" element={<RequirePermission permission="analytics.view"><RequireFeature feature="analytics"><Insights /></RequireFeature></RequirePermission>} />
-                  <Route path="/assistant" element={<RequirePermission permission="assistant.use"><RequireFeature feature="analytics"><Assistant /></RequireFeature></RequirePermission>} />
-                  <Route path="/risk" element={<RequirePermission permission="analytics.view"><RequireFeature feature="analytics"><Risk /></RequireFeature></RequirePermission>} />
+                  <Route path="/insights" element={<RequirePermission permission="analytics.view"><RequireFeature feature="ai"><Insights /></RequireFeature></RequirePermission>} />
+                  <Route path="/assistant" element={<RequirePermission permission="assistant.use"><RequireFeature feature="ai"><Assistant /></RequireFeature></RequirePermission>} />
+                  <Route path="/risk" element={<RequirePermission permission="analytics.view"><RequireFeature feature="risk"><Risk /></RequireFeature></RequirePermission>} />
                   <Route path="/wholesale" element={<RequirePermission permission="wholesale.buy"><Wholesale /></RequirePermission>} />
                   <Route path="/returns" element={<RequirePermission permission="returns.view"><Returns /></RequirePermission>} />
-                  <Route path="/stale" element={<RequirePermission permission="stock.stale"><Stale /></RequirePermission>} />
+                  <Route path="/stale" element={<RequirePermission permission="stock.stale"><RequireFeature feature="risk"><Stale /></RequireFeature></RequirePermission>} />
                   <Route path="/billing" element={<RequirePermission permission="settings.business"><Billing /></RequirePermission>} />
                   <Route path="/platform" element={<RequirePlatformAdmin><Platform /></RequirePlatformAdmin>} />
                   <Route path="/support" element={<Support />} />
