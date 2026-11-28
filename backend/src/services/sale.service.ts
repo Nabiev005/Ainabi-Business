@@ -5,6 +5,7 @@ import { toNumber, round2 } from "../utils/money";
 import { changeStock, consumeBatches, findOpenShift, getDefaultLocation, nextNumber, resolveLocationId } from "../utils/stockLedger";
 import { CreateReturnInput, CreateSaleInput, SaleQuery } from "../validators/sale.validator";
 import { hasPermission, Role } from "../config/permissions";
+import { businessHas } from "../config/plans";
 import { consumeForSale, expireDue } from "./reservation.service";
 
 function addMonths(date: Date, months: number) {
@@ -131,14 +132,15 @@ export async function createSale(
 
   // Loyalty points: spend up to the owner's share of the receipt, earn a
   // percent of what is actually paid (not on credit or wholesale prices).
+  const bonusOn = business.bonusEnabled && businessHas(business, "loyalty");
   const bonusUsed = round2(input.bonusUsed);
   if (bonusUsed > 0) {
-    if (!business.bonusEnabled || !customer) throw ApiError.badRequest("Бонус менен төлөө үчүн кардарды тандаңыз.");
+    if (!bonusOn || !customer) throw ApiError.badRequest("Бонус менен төлөө үчүн кардарды тандаңыз.");
     const maxSpend = Math.floor((payable * business.bonusMaxSpendPercent) / 100);
     if (bonusUsed > maxSpend + 0.005) throw ApiError.badRequest(`Бонус менен эң көп ${maxSpend} сом төлөсө болот.`);
   }
   const total = round2(payable - bonusUsed);
-  const earnsBonus = business.bonusEnabled && !!customer && input.paymentMethod !== "DEBT" && input.priceLevel === "RETAIL";
+  const earnsBonus = bonusOn && !!customer && input.paymentMethod !== "DEBT" && input.priceLevel === "RETAIL";
   const bonusEarned = earnsBonus ? Math.floor((total * toNumber(business.bonusPercent)) / 100) : 0;
 
   if (input.paymentMethod === "DEBT" && !input.customerId) {

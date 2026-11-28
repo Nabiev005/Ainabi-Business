@@ -11,6 +11,8 @@ import * as customerService from "../../services/customer.service";
 import { extractErrorMessage } from "../../services/api";
 import { formatDate, formatDateTime, formatMoney } from "../../utils/format";
 import type { CustomerDetail } from "../../types";
+import { CustomerCrmCard } from "../Crm/CustomerCrmCard";
+import { PlanLockNote, useFeature } from "../../components/RequireFeature";
 
 export default function CustomerProfile() {
   const { t } = useTranslation();
@@ -19,6 +21,7 @@ export default function CustomerProfile() {
   const { showToast } = useToast();
   const labels = useLabels();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
+  const hasCrm = useFeature("crm");
 
   useEffect(() => {
     if (!id) return;
@@ -83,6 +86,16 @@ export default function CustomerProfile() {
           </div>
         )}
       </div>
+
+      {hasCrm ? (
+        <CustomerCrmCard customerId={customer.id} />
+      ) : (
+        <div className="card card-pad stack gap-2">
+          <strong>{t("crm.card.title")}</strong>
+          <span className="text-muted" style={{ fontSize: "var(--font-size-sm)" }}>{t("crm.card.upsell")}</span>
+          <PlanLockNote feature="crm" />
+        </div>
+      )}
 
       {customer.bonusHistory.length > 0 && (
         <div className="card">

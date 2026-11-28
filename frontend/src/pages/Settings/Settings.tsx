@@ -15,10 +15,12 @@ import { CurrencyCard } from "./CurrencyCard";
 import { CatalogCard } from "./CatalogCard";
 import { WholesaleCard } from "./WholesaleCard";
 import { TelegramCard } from "./TelegramCard";
+import { PlanLockNote, useFeature } from "../../components/RequireFeature";
 
 export default function Settings() {
   const { t } = useTranslation();
   const { session, updateSessionBusiness } = useAuth();
+  const hasLoyalty = useFeature("loyalty");
   const { showToast } = useToast();
   const [business, setBusiness] = useState<Business | null>(null);
   const [form, setForm] = useState({
@@ -132,11 +134,17 @@ export default function Settings() {
           </div>
           <div className="product-attr-section">
             <label className="row gap-2" style={{ cursor: "pointer" }}>
-              <input type="checkbox" checked={form.bonusEnabled} onChange={(e) => setForm((f) => ({ ...f, bonusEnabled: e.target.checked }))} />
+              <input
+                type="checkbox"
+                checked={form.bonusEnabled && hasLoyalty}
+                disabled={!hasLoyalty}
+                onChange={(e) => setForm((f) => ({ ...f, bonusEnabled: e.target.checked }))}
+              />
               <strong>{t("settings.bonus.enabled")}</strong>
             </label>
             <span className="field-hint">{t("settings.bonus.hint")}</span>
-            {form.bonusEnabled && (
+            {!hasLoyalty && <PlanLockNote feature="loyalty" />}
+            {form.bonusEnabled && hasLoyalty && (
               <div className="form-grid">
                 <div className="field">
                   <label className="field-label">{t("settings.bonus.percent")}</label>

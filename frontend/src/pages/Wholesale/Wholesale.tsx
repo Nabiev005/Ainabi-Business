@@ -14,6 +14,7 @@ import { formatDateTime, formatMoney } from "../../utils/format";
 import { SupplierShop } from "./SupplierShop";
 import { OrderModal, STATUS_BADGE } from "./OrderModal";
 import "./Wholesale.css";
+import { PlanLockNote, useFeature } from "../../components/RequireFeature";
 
 type Tab = "suppliers" | "buying" | "selling";
 
@@ -21,7 +22,9 @@ export default function Wholesale() {
   const { t } = useTranslation();
   const { can } = usePermissions();
   const { showToast } = useToast();
-  const canBuy = can("wholesale.buy");
+  // Buying from other shops is Pro and up; incoming orders work on every plan.
+  const buyIncluded = useFeature("wholesale");
+  const canBuy = can("wholesale.buy") && buyIncluded;
   const canSell = can("wholesale.sell");
   const [tab, setTab] = useState<Tab>(canBuy ? "suppliers" : "selling");
   const [suppliers, setSuppliers] = useState<WholesaleSupplier[] | null>(null);
@@ -78,6 +81,7 @@ export default function Wholesale() {
             </button>
           )}
         </div>
+        {!buyIncluded && can("wholesale.buy") && <PlanLockNote feature="wholesale" />}
       </div>
 
       {tab === "suppliers" &&

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../utils/ApiError";
-import { Feature, PLANS, SubscriptionInfo } from "../config/plans";
+import { Feature, SubscriptionInfo } from "../config/plans";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -22,8 +22,8 @@ declare global {
 export function requireFeature(feature: Feature) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (req.isPlatformAdmin) return next();
-    const plan = req.subscription?.plan;
-    if (!plan || !PLANS[plan].features.includes(feature)) {
+    // subscription.features already includes what a business keeps from before the plan split.
+    if (!req.subscription?.features.includes(feature)) {
       throw new ApiError(402, "Бул бөлүм сиздин тарифке кирбейт. Тарифти жогорулатыңыз.", { code: "PLAN_FEATURE", feature });
     }
     next();

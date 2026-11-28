@@ -28,6 +28,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Modal } from "../../components/ui/Modal";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { useAuth } from "../../hooks/useAuth";
+import { useFeature } from "../../components/RequireFeature";
 import { sessionCan } from "../../hooks/usePermissions";
 import { useToast } from "../../hooks/useToast";
 import { useLabels } from "../../hooks/useLabels";
@@ -237,6 +238,7 @@ type CatalogCard =
 export default function Pos() {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const hasLoyalty = useFeature("loyalty");
   const { showToast } = useToast();
   const labels = useLabels();
   const business = session?.business;
@@ -531,7 +533,7 @@ export default function Pos() {
   const appliedDiscount = Math.min(discount, maxDiscount);
   const payable = Math.max(0, subtotal - appliedDiscount);
   // Loyalty points: never more than the customer has or the owner allows per receipt.
-  const bonusOn = !!business?.bonusEnabled && !!selectedCustomer;
+  const bonusOn = hasLoyalty && !!business?.bonusEnabled && !!selectedCustomer;
   const bonusMax = bonusOn
     ? Math.max(0, Math.min(selectedCustomer?.bonusBalance ?? 0, Math.floor((payable * Number(business?.bonusMaxSpendPercent ?? 0)) / 100)))
     : 0;

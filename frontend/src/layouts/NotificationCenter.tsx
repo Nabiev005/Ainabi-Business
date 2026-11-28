@@ -40,8 +40,9 @@ export function NotificationCenter() {
   const { session } = useAuth();
   // First week of the month: last month's report + advice is waiting.
   const reportReady =
-    new Date().getDate() <= 7 && sessionCan(session, "analytics.view") && (!!session?.isPlatformAdmin || !!session?.subscription?.features.includes("analytics"));
+    new Date().getDate() <= 7 && sessionCan(session, "analytics.view") && (!!session?.isPlatformAdmin || !!session?.subscription?.features.includes("ai"));
   const rootRef = useRef<HTMLDivElement>(null);
+  const hasTasks = !!session?.isPlatformAdmin || !!session?.subscription?.features.includes("tasks");
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -57,8 +58,8 @@ export function NotificationCenter() {
       dashboardService.getLowStock(),
       debtService.getDebtSummary().catch(() => ({ totalOutstanding: 0, openDebts: 0 })),
       supplierService.getSupplierSummary().catch(() => ({ totalOutstanding: 0, openDebts: 0 })),
-      // Off the plan (402) or not allowed: just no task notifications.
-      taskService.getTaskNotifications().catch(() => ({ unseen: 0, tasks: [] as Task[] })),
+      // Off the plan: don't ask at all (it would only answer 402). Not allowed: just no task notifications.
+      hasTasks ? taskService.getTaskNotifications().catch(() => ({ unseen: 0, tasks: [] as Task[] })) : { unseen: 0, tasks: [] as Task[] },
     ])
       .then(([stock, customerDebts, supplierDebts, myTasks]) => {
         setLowStock(stock);

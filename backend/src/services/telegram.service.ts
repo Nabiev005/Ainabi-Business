@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "../config/prisma";
 import { env } from "../config/env";
 import { hasPermission, Permission, Role } from "../config/permissions";
+import { businessHas } from "../config/plans";
 import { dayKey } from "../utils/dateRange";
 import { sendTelegram, telegramEnabled } from "../utils/telegram";
 import { normalizeLang, type Lang } from "../i18n/messages";
@@ -110,7 +111,11 @@ export async function handleUpdate(update: TelegramUpdate) {
     return sendTelegram(chatId, textFor(employee.telegramLang).linked(employee.business.name));
   }
 
-  const linked = await prisma.employee.findFirst({ where: { telegramChatId: chatId, status: "ACTIVE" }, orderBy: { createdAt: "asc" } });
+  const linked = await prisma.employee.findFirst({
+    where: { telegramChatId: chatId, status: "ACTIVE" },
+    orderBy: { createdAt: "asc" },
+    include: { business: { select: { plan: true, complimentary: true, legacyFeaturesUntil: true } } },
+  });
   if (text === "/stop") {
     await prisma.employee.updateMany({ where: { telegramChatId: chatId }, data: { telegramChatId: null } });
     return sendTelegram(chatId, textFor(linked?.telegramLang ?? guessLang).stopped);
@@ -119,7 +124,8 @@ export async function handleUpdate(update: TelegramUpdate) {
 
   const t = textFor(linked.telegramLang);
   // Anything else is a question for the AI assistant, under the same rules as in the app.
-  if (!hasPermission(linked.role as Role, "assistant.use")) return sendTelegram(chatId, t.linkedHelp);
+  // The AI assistant is a Max module, in Telegram as in the app.
+  if (!hasPermission(linked.role as Role, "assistant.use") || !businessHas(linked.business, "ai")) return sendTelegram(chatId, t.linkedHelp);
   if (!assistant.assistantStatus().enabled) return sendTelegram(chatId, t.noAi);
   try {
     const { answer } = await assistant.ask(linked.businessId, [{ role: "user", content: text.slice(0, 4000) }], normalizeLang(linked.telegramLang));
@@ -135,6 +141,9 @@ export async function handleUpdate(update: TelegramUpdate) {
 export async function notifyBusiness(businessId: string, permission: Permission, message: (t: (typeof TEXT)["ky"]) => string) {
   if (!telegramEnabled()) return;
   try {
+    // Telegram messages are a Max module.
+    const business = await prisma.business.findUnique({ where: { id: businessId }, select: { plan: true, complimentary: true, legacyFeaturesUntil: true } });
+    if (!business || !businessHas(business, "telegram")) return;
     const people = await prisma.employee.findMany({
       where: { businessId, status: "ACTIVE", telegramChatId: { not: null } },
       select: { role: true, telegramChatId: true, telegramLang: true },
@@ -160,11 +169,12 @@ export function notifyWholesaleOrder(sellerBusinessId: string, buyerName: string
 /** The evening report, for every business that has someone linked. Run once a day by Vercel Cron. */
 export async function sendDailyReports() {
   if (!telegramEnabled()) return { businesses: 0 };
-  const businesses = await prisma.employee.findMany({
+  const linkedRows = await prisma.employee.findMany({
     where: { telegramChatId: { not: null }, status: "ACTIVE" },
-    select: { businessId: true },
+    select: { businessId: true, business: { select: { plan: true, complimentary: true, legacyFeaturesUntil: true } } },
     distinct: ["businessId"],
   });
+  const businesses = linkedRows.filter((row) => businessHas(row.business, "telegram"));
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   for (const { businessId } of businesses) {

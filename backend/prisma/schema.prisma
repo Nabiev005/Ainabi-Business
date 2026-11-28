@@ -151,6 +151,10 @@ model Business {
   // Free for good (the platform owner's own shop, partners): no expiry,
   // every module, no limits. Set from the platform panel.
   complimentary        Boolean          @default(false)
+  // Businesses that existed when the plans were split (2026-11) keep the
+  // modules they had until then (see LEGACY_EXTRAS in config/plans.ts);
+  // their next paid period clears this.
+  legacyFeaturesUntil  DateTime?
   // Which preset the owner picked ("PHONES", "LAPTOPS", "CLOTHING", ...) —
   // see src/config/businessTemplates.ts. Only a label; the actual behaviour
   // lives in the fields/flags below, which the owner can edit freely.
@@ -213,6 +217,7 @@ model Business {
   subscriptionPayments SubscriptionPayment[]
   reservations         Reservation[]
   bonusTransactions    BonusTransaction[]
+  customerActivities   CustomerActivity[]
 
   @@map("businesses")
 }
@@ -257,19 +262,20 @@ model Employee {
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 
-  sales            Sale[]
-  stockMovements   StockMovement[]
-  expenses         Expense[]
-  purchaseReceipts PurchaseReceipt[]
-  inventoryCounts  InventoryCount[]
-  stockTransfers   StockTransfer[]
-  saleReturns      SaleReturn[]
-  repairOrders     RepairOrder[]
-  cashShifts       CashShift[]
-  assignedTasks    Task[]              @relation("TaskAssignee")
-  createdTasks     Task[]              @relation("TaskCreator")
-  stageEvents      ProductStageEvent[]
-  reservations     Reservation[]
+  sales              Sale[]
+  stockMovements     StockMovement[]
+  expenses           Expense[]
+  purchaseReceipts   PurchaseReceipt[]
+  inventoryCounts    InventoryCount[]
+  stockTransfers     StockTransfer[]
+  saleReturns        SaleReturn[]
+  repairOrders       RepairOrder[]
+  cashShifts         CashShift[]
+  assignedTasks      Task[]              @relation("TaskAssignee")
+  createdTasks       Task[]              @relation("TaskCreator")
+  stageEvents        ProductStageEvent[]
+  reservations       Reservation[]
+  customerActivities CustomerActivity[]
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -433,18 +439,21 @@ model SupplierPayment {
 // ---------------------------------------------------------------------------
 
 model Customer {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   businessId   String
-  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business     Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name         String
   phone        String?
   notes        String?
   // Gets the wholesale price at the POS by default.
-  isWholesale  Boolean  @default(false)
+  isWholesale  Boolean   @default(false)
   // Loyalty points in som (see Business.bonusPercent); BonusTransaction is the ledger.
-  bonusBalance Decimal  @default(0) @db.Decimal(12, 2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  bonusBalance Decimal   @default(0) @db.Decimal(12, 2)
+  // CRM (Max): free-form labels ("VIP", "оптовик") and the birthday for greetings.
+  tags         String[]  @default([])
+  birthday     DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   sales             Sale[]
   debts             Debt[]
@@ -452,9 +461,38 @@ model Customer {
   repairOrders      RepairOrder[]
   reservations      Reservation[]
   bonusTransactions BonusTransaction[]
+  activities        CustomerActivity[]
 
   @@index([businessId])
   @@map("customers")
+}
+
+enum CustomerActivityKind {
+  NOTE
+  CALL
+  MESSAGE
+  FOLLOW_UP
+}
+
+// CRM timeline of a customer: notes, calls, messages sent, and follow-ups
+// ("call back on Friday") — a FOLLOW_UP has dueAt and is closed with doneAt.
+model CustomerActivity {
+  id         String               @id @default(cuid())
+  businessId String
+  business   Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  employeeId String?
+  employee   Employee?            @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  kind       CustomerActivityKind
+  text       String
+  dueAt      DateTime?
+  doneAt     DateTime?
+  createdAt  DateTime             @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([businessId, kind, doneAt, dueAt])
+  @@map("customer_activities")
 }
 
 // ---------------------------------------------------------------------------

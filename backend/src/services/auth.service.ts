@@ -35,6 +35,8 @@ function serializeSession(employee: {
     plan: PlanId;
     planExpiresAt: Date | null;
     isTrial: boolean;
+    complimentary?: boolean;
+    legacyFeaturesUntil?: Date | null;
   };
   user: ReturnType<typeof toSessionUser>;
 }) {

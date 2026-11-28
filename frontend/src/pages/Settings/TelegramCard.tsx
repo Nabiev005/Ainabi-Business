@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2, Send, Unlink } from "lucide-react";
 import { useToast } from "../../hooks/useToast";
 import { api, extractErrorMessage } from "../../services/api";
+import { PlanLockNote, useFeature } from "../../components/RequireFeature";
 
 interface LinkStatus {
   enabled: boolean;
@@ -17,6 +18,7 @@ export function TelegramCard() {
   const [status, setStatus] = useState<LinkStatus | null>(null);
   const [waiting, setWaiting] = useState(false);
   const poll = useRef<number | null>(null);
+  const included = useFeature("telegram");
 
   const load = () =>
     api
@@ -78,7 +80,9 @@ export function TelegramCard() {
         <p className="text-muted" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
           {t("settings.telegram.intro")}
         </p>
-        {status?.connected ? (
+        {!included ? (
+          <PlanLockNote feature="telegram" />
+        ) : status?.connected ? (
           <div className="row gap-3" style={{ flexWrap: "wrap" }}>
             <span className="row gap-2" style={{ color: "var(--color-success-text)", fontWeight: 700 }}>
               <CheckCircle2 size={18} /> {t("settings.telegram.connectedTo", { bot: `@${status.botUsername}` })}

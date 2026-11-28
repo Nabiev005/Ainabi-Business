@@ -239,7 +239,8 @@ export async function recordPayment(
         plan: input.plan,
         ...(extends_ ? { planExpiresAt: end } : {}),
         // A real payment ends the trial; a goodwill extension (days, no money) keeps the flag as is.
-        ...(input.months > 0 ? { isTrial: false } : {}),
+        // It also starts the new plan rules: what the business kept from before the split ends here.
+        ...(input.months > 0 ? { isTrial: false, legacyFeaturesUntil: null } : {}),
       },
     });
     if (input.months > 0 || input.amount > 0) {
