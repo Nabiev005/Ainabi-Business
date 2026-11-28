@@ -68,7 +68,7 @@ export function CatalogCard() {
       </div>
       <div className="card-pad stack gap-4">
         <p className="text-muted" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
-          {t("settings.catalog.intro")}
+          {t("settings.catalog.intro")} {t("settings.catalog.google")}
         </p>
 
         <label className="row gap-2" style={{ cursor: "pointer" }}>

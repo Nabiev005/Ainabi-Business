@@ -16,6 +16,7 @@ const Login = lazy(() => import("./pages/Auth/Login"));
 const Register = lazy(() => import("./pages/Auth/Register"));
 const ForgotPassword = lazy(() => import("./pages/Auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/Auth/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/Auth/VerifyEmail"));
 const Privacy = lazy(() => import("./pages/Legal/Privacy"));
 const Terms = lazy(() => import("./pages/Legal/Terms"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/c/:slug" element={<Catalog />} />
               <Route path="/terms" element={<Terms />} />

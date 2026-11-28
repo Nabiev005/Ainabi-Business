@@ -10,6 +10,8 @@ import {
   refreshHandler,
   registerHandler,
   resetPasswordHandler,
+  resendVerificationHandler,
+  verifyEmailHandler,
 } from "../controllers/auth.controller";
 import { requireAuth } from "../middleware/auth";
 
@@ -25,5 +27,7 @@ router.post("/change-password", requireAuth, changePasswordHandler);
 router.get("/password-reset", passwordResetStatusHandler);
 router.post("/forgot-password", forgotPasswordHandler);
 router.post("/reset-password", resetPasswordHandler);
+router.post("/verify-email", verifyEmailHandler);
+router.post("/resend-verification", requireAuth, resendVerificationHandler);
 
 export default router;

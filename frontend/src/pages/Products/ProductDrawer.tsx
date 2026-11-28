@@ -12,6 +12,7 @@ import { formatMoney } from "../../utils/format";
 import { generateBarcodeFromSku } from "../../utils/barcode";
 import { resizeImageToDataUrl } from "../../utils/image";
 import { findDuplicateSerial, parseSerials } from "../../utils/serials";
+import { CameraButton, CameraScanner } from "../../components/CameraScanner";
 import { useToast } from "../../hooks/useToast";
 import { AnalogsSection, BatchesSection, PackagesEditor, SerialsSection } from "./ProductExtras";
 import "./Products.css";
@@ -120,6 +121,8 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
   const [packages, setPackages] = useState<ProductPackage[]>([]);
   /** One serial / IMEI per line. */
   const [serialsText, setSerialsText] = useState("");
+  /** Which field the camera fills. */
+  const [camera, setCamera] = useState<"barcode" | "serials" | null>(null);
   const { session } = useAuth();
   const business = session?.business;
   const productFields = useMemo(() => business?.productFields ?? [], [business?.productFields]);
@@ -378,6 +381,15 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
         </>
       }
     >
+      <CameraScanner
+        open={camera !== null}
+        continuous={camera === "serials"}
+        onClose={() => setCamera(null)}
+        onDetected={(code) => {
+          if (camera === "barcode") setValue("barcode", code, { shouldDirty: true });
+          else handleSerialsChange(serialsText.trim() ? `${serialsText.trimEnd()}\n${code}` : code);
+        }}
+      />
       <form className="stack gap-4" onSubmit={submit}>
         <div className="field">
           <label className="field-label">{t("products.drawer.name")}</label>
@@ -417,7 +429,10 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
           </div>
           <div className="field">
             <label className="field-label">{t("products.drawer.barcode")}</label>
-            <input className="input" placeholder="4870001234561" {...register("barcode")} />
+            <div className="row gap-2">
+              <input className="input" style={{ flex: 1 }} placeholder="4870001234561" {...register("barcode")} />
+              <CameraButton onClick={() => setCamera("barcode")} />
+            </div>
             {skuValue && barcodeValue === lastAutoBarcode.current && (
               <span className="field-hint">{t("products.drawer.barcodeAutoHint")}</span>
             )}
@@ -426,9 +441,12 @@ export function ProductDrawer({ open, onClose, onSubmit, categories, product, su
 
         {showSerials && (
           <div className="field">
-            <label className="field-label" htmlFor="product-serials">
-              {product ? t("products.drawer.serialsAdd") : t("products.drawer.serials")}
-            </label>
+            <div className="row gap-2">
+              <label className="field-label spacer" htmlFor="product-serials">
+                {product ? t("products.drawer.serialsAdd") : t("products.drawer.serials")}
+              </label>
+              <CameraButton onClick={() => setCamera("serials")} />
+            </div>
             <textarea
               id="product-serials"
               className={`textarea product-serials-input ${duplicateSerial ? "has-error" : ""}`}

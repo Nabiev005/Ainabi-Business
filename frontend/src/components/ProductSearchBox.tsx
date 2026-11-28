@@ -4,6 +4,7 @@ import { ScanBarcode } from "lucide-react";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import * as productService from "../services/product.service";
 import { formatMoney, formatNumber, unitLabel } from "../utils/format";
+import { CameraButton, CameraScanner } from "./CameraScanner";
 import type { Product, ScanInfo } from "../types";
 
 interface ProductSearchBoxProps {
@@ -29,6 +30,7 @@ export function ProductSearchBox({ onPick, locationId, placeholder, onNotFound, 
   const [results, setResults] = useState<Product[]>([]);
   const [active, setActive] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const debounced = useDebouncedValue(query, 250);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,8 +73,8 @@ export function ProductSearchBox({ onPick, locationId, placeholder, onNotFound, 
     inputRef.current?.focus();
   }
 
-  async function handleEnter() {
-    const code = query.trim();
+  async function handleEnter(scanned?: string) {
+    const code = (scanned ?? query).trim();
     if (!code) return;
     // Exact barcode first (covers packages and scale labels) …
     try {
@@ -83,13 +85,15 @@ export function ProductSearchBox({ onPick, locationId, placeholder, onNotFound, 
     } catch {
       // … otherwise take the highlighted search result, if any.
     }
-    if (results[active]) pick(results[active], null);
+    if (!scanned && results[active]) pick(results[active], null);
     else onNotFound?.(code);
   }
 
   return (
     <div className="product-search" ref={rootRef}>
-      <div className="input-with-icon">
+      <CameraScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onDetected={(code) => void handleEnter(code)} />
+      <div className="row gap-2">
+      <div className="input-with-icon" style={{ flex: 1 }}>
         <ScanBarcode size={16} />
         <input
           ref={inputRef}
@@ -117,6 +121,8 @@ export function ProductSearchBox({ onPick, locationId, placeholder, onNotFound, 
             }
           }}
         />
+      </div>
+      <CameraButton onClick={() => setCameraOpen(true)} />
       </div>
       {open && query.trim() && (
         <div className="product-search-results">

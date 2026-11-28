@@ -46,9 +46,12 @@ export const TRIAL_DAYS = 14;
 /** Show the "ending soon" warning this many days before expiry. */
 export const WARN_DAYS = 3;
 
-export function trialEndsAt(from = new Date()) {
+/** Trial for a password sign-up that hasn't confirmed its email yet. */
+export const UNVERIFIED_TRIAL_DAYS = 3;
+
+export function trialEndsAt(from = new Date(), days = TRIAL_DAYS) {
   const end = new Date(from);
-  end.setDate(end.getDate() + TRIAL_DAYS);
+  end.setDate(end.getDate() + days);
   return end;
 }
 

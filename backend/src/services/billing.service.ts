@@ -86,7 +86,7 @@ export async function listAllBusinesses(search?: string) {
         }
       : {},
     include: {
-      owner: { select: { name: true, email: true, phone: true } },
+      owner: { select: { name: true, email: true, phone: true, emailVerifiedAt: true } },
       _count: { select: { employees: true, sales: true, products: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -98,6 +98,8 @@ export async function listAllBusinesses(search?: string) {
     _max: { createdAt: true },
   });
   const lastSaleBy = new Map(lastSales.map((s) => [s.businessId, s._max.createdAt]));
+  const ids = businesses.map((b) => b.id);
+  const [week, month] = await Promise.all([salesSince(ids, 7), salesSince(ids, 30)]);
 
   return businesses.map((b) => ({
     id: b.id,
@@ -111,8 +113,99 @@ export async function listAllBusinesses(search?: string) {
     sales: b._count.sales,
     products: b._count.products,
     lastSaleAt: lastSaleBy.get(b.id) ?? null,
+    sales7d: week.get(b.id) ?? 0,
+    sales30d: month.get(b.id) ?? 0,
+    health: healthOf(b.createdAt, lastSaleBy.get(b.id) ?? null),
+    ownerVerified: !!b.owner.emailVerifiedAt,
     subscription: subscriptionInfo(b),
   }));
+}
+
+/** Receipts per business over the last `days` days. */
+async function salesSince(businessIds: string[], days: number) {
+  const rows = await prisma.sale.groupBy({
+    by: ["businessId"],
+    where: { businessId: { in: businessIds }, createdAt: { gte: new Date(Date.now() - days * 86_400_000) } },
+    _count: true,
+  });
+  return new Map(rows.map((r) => [r.businessId, r._count]));
+}
+
+export type Health = "NEW" | "ACTIVE" | "SLOWING" | "INACTIVE";
+
+/** Is the shop actually using the system? Judged by its last sale. */
+export function healthOf(createdAt: Date, lastSaleAt: Date | null, now = Date.now()): Health {
+  const ageDays = (now - createdAt.getTime()) / 86_400_000;
+  if (!lastSaleAt) return ageDays < 3 ? "NEW" : "INACTIVE";
+  const idle = (now - lastSaleAt.getTime()) / 86_400_000;
+  if (idle <= 7) return "ACTIVE";
+  return idle <= 14 ? "SLOWING" : "INACTIVE";
+}
+
+/**
+ * The owner's dashboard: how many shops, how many pay, monthly revenue, who
+ * is about to run out, and who stopped using the system — the people to call.
+ */
+export async function platformOverview() {
+  const all = await listAllBusinesses();
+  const now = Date.now();
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const sixMonthsAgo = new Date(startOfMonth);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+
+  const payments = await prisma.subscriptionPayment.findMany({ where: { createdAt: { gte: sixMonthsAgo } }, select: { amount: true, createdAt: true } });
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(sixMonthsAgo);
+    d.setMonth(d.getMonth() + i);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const revenueByMonth = new Map(months.map((m) => [m, 0]));
+  for (const p of payments) {
+    const key = `${p.createdAt.getFullYear()}-${String(p.createdAt.getMonth() + 1).padStart(2, "0")}`;
+    if (revenueByMonth.has(key)) revenueByMonth.set(key, revenueByMonth.get(key)! + toNumber(p.amount));
+  }
+
+  const paying = all.filter((b) => b.subscription.active && !b.subscription.isTrial && !b.subscription.complimentary);
+  const trials = all.filter((b) => b.subscription.active && b.subscription.isTrial && !b.subscription.complimentary);
+  const pick = (b: (typeof all)[number]) => ({
+    id: b.id,
+    name: b.name,
+    ownerName: b.ownerName,
+    phone: b.ownerPhone ?? b.phone,
+    plan: b.subscription.plan,
+    isTrial: b.subscription.isTrial,
+    expiresAt: b.subscription.expiresAt,
+    daysLeft: b.subscription.daysLeft,
+    lastSaleAt: b.lastSaleAt,
+    sales30d: b.sales30d,
+  });
+
+  return {
+    totals: {
+      businesses: all.length,
+      paying: paying.length,
+      trials: trials.length,
+      complimentary: all.filter((b) => b.subscription.complimentary).length,
+      expired: all.filter((b) => !b.subscription.active).length,
+      newLast30Days: all.filter((b) => now - new Date(b.createdAt).getTime() < 30 * 86_400_000).length,
+      activeLast7Days: all.filter((b) => b.health === "ACTIVE").length,
+    },
+    // What the paying shops bring in a month at list price.
+    mrr: paying.reduce((s, b) => s + PLANS[b.subscription.plan].priceMonthly, 0),
+    revenueByMonth: months.map((month) => ({ month, amount: Math.round(revenueByMonth.get(month)! * 100) / 100 })),
+    expiringSoon: all
+      .filter((b) => b.subscription.active && !b.subscription.complimentary && b.subscription.daysLeft <= 7)
+      .sort((a, b) => a.subscription.daysLeft - b.subscription.daysLeft)
+      .map(pick),
+    // Paying or trying, but not selling any more.
+    atRisk: all
+      .filter((b) => b.subscription.active && (b.health === "SLOWING" || b.health === "INACTIVE"))
+      .sort((a, b) => (a.lastSaleAt ? new Date(a.lastSaleAt).getTime() : 0) - (b.lastSaleAt ? new Date(b.lastSaleAt).getTime() : 0))
+      .map(pick),
+    mostActive: [...all].filter((b) => b.sales30d > 0).sort((a, b) => b.sales30d - a.sales30d).slice(0, 10).map(pick),
+  };
 }
 
 /**

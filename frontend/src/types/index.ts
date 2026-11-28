@@ -72,6 +72,8 @@ export interface User {
   hasPassword?: boolean;
   /** The owner chose this password — the person must set their own first. */
   mustChangePassword?: boolean;
+  /** false = a new sign-up that hasn't clicked the confirmation link yet. */
+  emailVerified?: boolean;
 }
 
 export type ProductFieldType = "text" | "number" | "select" | "boolean" | "date";
@@ -218,6 +220,8 @@ export interface ScanInfo {
   factor: number;
   /** Weight read from a scale label. */
   quantity: number | null;
+  /** The code was a unit's IMEI / serial number. */
+  serial?: string | null;
 }
 
 export type ScannedProduct = Product & { scan: ScanInfo | null };

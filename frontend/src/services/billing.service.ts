@@ -51,7 +51,39 @@ export interface PlatformBusiness {
   sales: number;
   products: number;
   lastSaleAt: string | null;
+  sales7d: number;
+  sales30d: number;
+  /** Judged by the last sale: ACTIVE within a week, SLOWING within two, then INACTIVE. */
+  health: "NEW" | "ACTIVE" | "SLOWING" | "INACTIVE";
+  ownerVerified: boolean;
   subscription: SubscriptionInfo;
+}
+
+export interface OverviewBusiness {
+  id: string;
+  name: string;
+  ownerName: string;
+  phone: string | null;
+  plan: PlanId;
+  isTrial: boolean;
+  expiresAt: string | null;
+  daysLeft: number;
+  lastSaleAt: string | null;
+  sales30d: number;
+}
+
+export interface PlatformOverview {
+  totals: { businesses: number; paying: number; trials: number; complimentary: number; expired: number; newLast30Days: number; activeLast7Days: number };
+  mrr: number;
+  revenueByMonth: { month: string; amount: number }[];
+  expiringSoon: OverviewBusiness[];
+  atRisk: OverviewBusiness[];
+  mostActive: OverviewBusiness[];
+}
+
+export async function getPlatformOverview(): Promise<PlatformOverview> {
+  const { data } = await api.get<PlatformOverview>("/platform/overview");
+  return data;
 }
 
 /** Public price list (landing page — no sign-in). */

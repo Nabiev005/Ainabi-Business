@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   AlarmClock,
   BookmarkCheck,
+  Camera,
   DollarSign,
   Gift,
   Handshake,
@@ -12,6 +13,7 @@ import {
   MessageCircle,
   ScanBarcode,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Target,
   Truck,
@@ -26,6 +28,8 @@ type FeatureCard = { key: string; icon: LucideIcon; path: string; permission: Pe
 
 /** What shipped in the latest release — shown on the landing page and once on the dashboard. */
 export const NEW_FEATURES: FeatureCard[] = [
+  { key: "camera", icon: Camera, path: "/pos", permission: "pos.sell" },
+  { key: "warrantyCard", icon: ShieldCheck, path: "/sales", permission: "sales.view" },
   { key: "bonus", icon: Gift, path: "/settings", permission: "settings.business" },
   { key: "whatsappReceipt", icon: MessageCircle, path: "/pos", permission: "pos.sell" },
   { key: "reservations", icon: BookmarkCheck, path: "/reservations", permission: "reservations.manage" },
@@ -45,7 +49,7 @@ export const EARLIER_FEATURES: FeatureCard[] = [
 ];
 
 /** Bump when a new batch of features ships, so the dashboard card shows again. */
-const RELEASE = "2026-11";
+const RELEASE = "2026-11-28";
 const STORAGE_KEY = "ainabi.whatsNew.dismissed";
 
 function isDismissed() {

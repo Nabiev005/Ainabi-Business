@@ -45,15 +45,33 @@ model User {
   // serverless instances (an in-memory limiter resets per instance).
   failedLogins       Int          @default(0)
   lockedUntil        DateTime?
+  // When the owner proved the address is theirs (link in an email, or
+  // Google). Null = not yet; a sign-up then only gets a short trial.
+  emailVerifiedAt    DateTime?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
-  ownedBusinesses Business[]           @relation("BusinessOwner")
-  employeeOf      Employee[]
-  refreshTokens   RefreshToken[]
-  passwordResets  PasswordResetToken[]
+  ownedBusinesses    Business[]               @relation("BusinessOwner")
+  employeeOf         Employee[]
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
 
   @@map("users")
+}
+
+// One-time "confirm your email" link. Only the SHA-256 of the token is stored.
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 // One-time "set a new password" link sent by email. Only the SHA-256 of the

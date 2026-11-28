@@ -41,11 +41,12 @@ import * as shiftService from "../../services/shift.service";
 import * as reservationService from "../../services/reservation.service";
 import type { Reservation } from "../../services/reservation.service";
 import { receiptMessage, whatsappShareLink } from "../../utils/messages";
+import { CameraButton, CameraScanner } from "../../components/CameraScanner";
 import { extractErrorMessage } from "../../services/api";
 import { formatMoney, formatNumber, unitLabel } from "../../utils/format";
 import { buildPaymentQrText, generateQrDataUrl } from "../../utils/qr";
 import { attributeChips } from "../../utils/attributes";
-import { printSaleReceipt } from "../../utils/documents";
+import { hasWarranty, printSaleReceipt, printWarrantyCard } from "../../utils/documents";
 import type { Category, Customer, PaymentMethod, Product, SaleDetail } from "../../types";
 import "./Pos.css";
 
@@ -269,6 +270,7 @@ export default function Pos() {
   const [lastSale, setLastSale] = useState<SaleDetail | null>(null);
   const [shiftOpen, setShiftOpen] = useState<boolean | null>(null);
   const [bonusUse, setBonusUse] = useState(0);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   // Selling a reservation (/pos?reservation=…): what it holds here counts as available.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -393,7 +395,7 @@ export default function Pos() {
       .catch(() => undefined);
   }
 
-  function addToCart(product: Product, options: { packageId?: string | null; quantity?: number } = {}) {
+  function addToCart(product: Product, options: { packageId?: string | null; quantity?: number; serial?: string | null } = {}) {
     // Product pipeline: still in a "not for sale" stage (e.g. being checked).
     if (product.stage?.blocksSale) {
       showToast({ variant: "error", title: t("pos.stageBlockedTitle"), message: t("pos.stageBlocked", { name: product.name, stage: product.stage.name }) });
@@ -404,6 +406,12 @@ export default function Pos() {
     const step = options.quantity ?? 1;
     const key = packageId ? `${product.id}:${packageId}` : product.id;
     const need = step * (pkg?.factor ?? 1);
+    // A scanned IMEI goes straight into the line — once.
+    const serial = options.serial?.trim().toUpperCase() || null;
+    if (serial && cart.some((l) => l.serials.some((s) => s.trim().toUpperCase() === serial))) {
+      showToast({ variant: "error", title: t("pos.serialMissingTitle"), message: t("pos.serialDuplicate", { serial }) });
+      return;
+    }
     if (usedBase(product.id) + need > avail(product) + 1e-9) {
       showToast({
         variant: "error",
@@ -415,9 +423,17 @@ export default function Pos() {
     setCart((prev) => {
       const existing = prev.find((line) => line.key === key);
       if (existing) {
-        return prev.map((line) => (line.key === key ? { ...line, quantity: Math.round((line.quantity + step) * 1000) / 1000 } : line));
+        return prev.map((line) => {
+          if (line.key !== key) return line;
+          const quantity = Math.round((line.quantity + step) * 1000) / 1000;
+          if (!serial) return { ...line, quantity };
+          const serials = [...line.serials];
+          const free = Array.from({ length: quantity }, (_, i) => i).find((i) => !serials[i]?.trim());
+          serials[free ?? quantity - 1] = serial;
+          return { ...line, quantity, serials };
+        });
       }
-      return [...prev, { key, product, packageId, quantity: step, serials: [] }];
+      return [...prev, { key, product, packageId, quantity: step, serials: serial ? [serial] : [] }];
     });
     loadSerialSuggestions(product);
     // Quick visual confirmation that the tap registered — the cart line pops once.
@@ -488,17 +504,22 @@ export default function Pos() {
     );
   }
 
+  /** A barcode, package / scale label or a unit's IMEI — from the scanner field or the camera. */
+  async function scanCode(code: string) {
+    try {
+      const { scan, ...product } = await productService.findByBarcode(code, locationId);
+      addToCart(product, { packageId: scan?.packageId ?? null, quantity: scan?.quantity ?? undefined, serial: scan?.serial });
+      return true;
+    } catch {
+      showToast({ variant: "error", title: t("pos.productNotFoundTitle"), message: t("pos.productNotFoundMessage", { barcode: code }) });
+      return false;
+    }
+  }
+
   async function handleBarcodeSubmit(e: React.FormEvent) {
     e.preventDefault();
     const code = barcode.trim();
-    if (!code) return;
-    try {
-      const { scan, ...product } = await productService.findByBarcode(code, locationId);
-      addToCart(product, { packageId: scan?.packageId ?? null, quantity: scan?.quantity ?? undefined });
-      setBarcode("");
-    } catch {
-      showToast({ variant: "error", title: t("pos.productNotFoundTitle"), message: t("pos.productNotFoundMessage", { barcode: code }) });
-    }
+    if (code && (await scanCode(code))) setBarcode("");
   }
 
   const subtotal = useMemo(
@@ -622,6 +643,7 @@ export default function Pos() {
               <ScanBarcode size={16} />
               <input className="input" placeholder={t("pos.barcodePlaceholder")} value={barcode} onChange={(e) => setBarcode(e.target.value)} />
             </form>
+            <CameraButton onClick={() => setCameraOpen(true)} />
             {canPickLocation && (
               <select className="select" style={{ width: 170 }} value={locationId} onChange={(e) => setLocationId(e.target.value)} title={t("receiving.location")}>
                 {locations.map((l) => (
@@ -1011,6 +1033,11 @@ export default function Pos() {
               <button className="btn btn-secondary" onClick={() => business && printSaleReceipt(lastSale, business)}>
                 <Printer size={16} /> {t("pos.printReceipt")}
               </button>
+              {business && hasWarranty(lastSale) && (
+                <button className="btn btn-secondary" onClick={() => printWarrantyCard(lastSale, business)}>
+                  <Printer size={16} /> {t("print.warrantyCardButton")}
+                </button>
+              )}
               {business && (
                 <a className="btn btn-secondary" href={whatsappShareLink(lastSale.customer?.phone, receiptMessage(lastSale, business))} target="_blank" rel="noreferrer">
                   <MessageCircle size={16} color="var(--color-success-text)" /> {t("pos.whatsappReceipt")}
@@ -1023,6 +1050,7 @@ export default function Pos() {
           </div>
         )}
       </Modal>
+      <CameraScanner open={cameraOpen} continuous onClose={() => setCameraOpen(false)} onDetected={(code) => void scanCode(code)} />
     </div>
   );
 }
